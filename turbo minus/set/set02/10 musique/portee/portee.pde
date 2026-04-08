@@ -3,10 +3,13 @@
 // z = ajoute une barre de mesure
 // e = start/stop une portée
 // r = une note tombe
+// t = les notes s'envolent
+// y = chaos (à répéter plusieurs fois pour plus de chaos)
 
 // f = couleur de fond
 // p = change la hauteur de la portée
 // q = mitraille les notes
+
 
 // constants for the staff
 int numLines = 5;
@@ -208,6 +211,8 @@ class Note {
   float bounceDuration = (float)frameRate/random(2.0, 5.0);
   int note;
 
+  Note alteration = null;
+
   Note(PImage im, float x, float y) {
     if (im!=null) this.imHead = im;
     this.x = x;
@@ -226,6 +231,7 @@ class Note {
       Note n = new Note(chosenAlt, x+imHead.width/2+chosenAlt.width/2, y);
       notes.add(n);
       this.x += chosenAlt.width;
+      alteration = n;
     }
     moveToQueue();
   }
@@ -393,7 +399,44 @@ void keyPressed() {
     continuousNotes = true;
   }
   if (key=='r') {
-    if (notes.size()>0) notes.get(floor(random(notes.size()))).ySpeedD+=2.0;
+    if (notes.size()>0) {
+      Note n = notes.get(floor(random(notes.size())));
+      n.ySpeedD+=2.0;
+      if (n.alteration!=null) n.alteration.ySpeedD = n.ySpeedD;
+    }
+  }
+  if (key=='t') {
+    for (int i = 0; i < notes.size(); i++) {
+      notes.get(i).ySpeedD -= random(0, 1);
+      if (notes.get(i).alteration!=null) notes.get(i).alteration.ySpeedD = notes.get(i).ySpeedD;
+    }
+  }
+  if (key=='y') {
+    for (int i = 0; i < notes.size(); i++) {
+      notes.get(i).ySpeedD += random(-1, 1);
+      notes.get(i).xSpeed += random(-1, 1);
+      notes.get(i).scale *= random(0.9, 1.5);
+      if (notes.get(i).alteration!=null) {
+        notes.get(i).alteration.ySpeedD = notes.get(i).ySpeedD;
+        notes.get(i).alteration.xSpeed = notes.get(i).xSpeed;
+      }
+    }
+  }
+  if (key=='w'||key=='x'||key=='c'||key=='v'||key=='b'||key=='n') {
+    Note n = new Note();
+    // place the note from low to high in the staff as if keyboard was a piano keaboard
+    if (key=='w') n.note = floor(random(10,8));
+    if (key=='x') n.note = floor(random(8,6));
+    if (key=='c') n.note = floor(random(6,4));
+    if (key=='v') n.note = floor(random(4,1));
+    if (key=='b') n.note = floor(random(1,-2));
+    if (key=='n') n.note = floor(random(-2,-5));
+    n.y = (float)n.note*lineSpacing/2;
+    if (n.alteration!=null) {
+      n.alteration.note = n.note;
+      n.alteration.y = n.y;
+    }
+    notes.add(n);
   }
 }
 
