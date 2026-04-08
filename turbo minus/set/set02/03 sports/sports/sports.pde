@@ -6,13 +6,31 @@ int interBallTimer = 0;
 
 boolean dark = true;
 
+// + = vitesse +
+// - = vitesse -
+// * = vitesse ++
+// / = vitesse --
+// u = plus petit
+// i = plus gros
+// s = change mode de mouvement
+// n = fond blanc
+// p = sprite pop
+// BACKSPACE = toggle dark mode
+
+int moveMode = 0;
+// 0 = normal movement
+// 1 = sinusoidal movement
+// 2 = horizontal zigzag movement
+
 ArrayList<PImage> spritesIm = new ArrayList<PImage>();
 ArrayList<Sprite> sprites = new ArrayList<Sprite>();
 float lifeEnd = 3.0;// duration of the sprites in seconds
 float fadeTime = 1.0;// duration of the fade in and out in seconds
 
+ArrayList<CopyRectangle> copyRectangles = new ArrayList<CopyRectangle>();
+
 void setup() {
-  fullScreen(P2D, Integer.parseInt(loadStrings(dataPath("../../../params.txt"))[1]));
+  fullScreen(Integer.parseInt(loadStrings(dataPath("../../../params.txt"))[1]));
   frameRate(60);
   thread("loadSprites");
   String[] ballImFiles = getAllFilesFrom(dataPath("balls"));
@@ -68,6 +86,12 @@ void draw() {
   for (Sprite sprite : sprites) {
     sprite.draw();
   }
+
+  for (int i=copyRectangles.size()-1; i>=0; i--) {
+    copyRectangles.get(i).draw();
+    if (!copyRectangles.get(i).isVisible()) copyRectangles.remove(i);
+  }
+
   if (dark) background(0);
 }
 
@@ -113,7 +137,23 @@ class Ball {
   }
 
   void move() {
-    position.add(velocity);
+    if (moveMode == 0) {
+      position.add(velocity);
+    } else if (moveMode == 1) {
+      // make the ball move in a sinusoidal pattern around its original path angle
+      float angle = atan2(velocity.y, velocity.x);
+      float speed = velocity.mag();
+      float newAngle = angle + sin(lifeTime/100.0)*0.2;
+      velocity.x = cos(newAngle)*speed;
+      velocity.y = sin(newAngle)*speed;
+      position.add(velocity);   
+    } else if (moveMode == 2) {
+      // make the ball move in a horizontal zigzag pattern
+      velocity.y *= 0.95;
+      velocity.x = cos(lifeTime/10.0)*20.0;
+      position.add(velocity);
+    } 
+
     // make ball bounce on vertical walls
     if (position.x-radius < 0) {
       velocity.x = abs(velocity.x)*1.0;
@@ -171,6 +211,9 @@ void keyPressed() {
       restart();
     }
   }
+  if (key=='c') {// smear
+    for (int i=0; i<1; i++) addNewCopyRectangle();
+  }
   if (key=='n') {
     background(0xFF);
   }
@@ -210,11 +253,22 @@ void keyPressed() {
       b.radius*=1.1;
     }
   }
+  if (key=='s') {
+    moveMode = (moveMode+1)%3;
+    if (moveMode == 0) {
+      for (Ball b : balls) {
+        b.velocity.mult(1.5);
+      }
+    }
+    println("move mode: "+moveMode);
+  }
 }
 
 void keyReleased() {
-  for (int i=sprites.size()-1; i>=0; i--) {
-    sprites.remove(i);
+  if (key=='p') {
+    for (int i=sprites.size()-1; i>=0; i--) {
+      sprites.remove(i);
+    }
   }
 }
 
@@ -262,5 +316,34 @@ class Sprite {
   void draw() {
     imageMode(CENTER);
     image(im, pos.x, pos.y, im.width*scale, im.height*scale);
+  }
+}
+
+void addNewCopyRectangle() {
+  CopyRectangle r = new CopyRectangle();
+  r.size = new PVector(round(random(200, 300)), round(random(200, 300)));
+  r.a = new PVector(random(width-r.size.x), random(height-r.size.y));
+  r.dirA = new PVector(random(-5, 5), random(-5, 5));
+  copyRectangles.add(r);
+}
+
+class CopyRectangle {
+  PVector a;
+  PVector size;
+  PVector dirA;
+  PImage grabbed;
+  void draw() {
+    if (isVisible()) {
+      grabbed = get(round(a.x), round(a.y), round(size.x), round(size.y));
+    }
+    a.add(dirA);
+    a.x = round(a.x);
+    a.y = round(a.y);
+    imageMode(CORNER);
+    if (grabbed!=null) image(grabbed, a.x, a.y, size.x, size.y);
+  }
+  boolean isVisible() {
+    float margin = 130;
+    return (a.x+size.x>=margin && a.x<=width-margin && a.y+size.y>=margin && a.y<=height-margin);
   }
 }
