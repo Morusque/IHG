@@ -1,7 +1,8 @@
 
 // (touches)  affiche la lettre
-// BAS  reset sentence
-// GAUCHE  next sentence
+// DROITE  next sentence
+// GAUCHE  reset sentence
+// BAS resymc autotempo
 // BACKSPACE  dark bg
 // ENTER  display next letter
 // ^  background motif
@@ -181,6 +182,9 @@ void keyPressed() {
     println("autoTempo : "+autoTempo);
   }
 
+  if (keyCode == DOWN) {// tempo phase at 0
+    tempoCounter = millis()-200;
+  }
   if (keyCode == RIGHT) { // next sentence
     sentenceIndex = (sentenceIndex + 1) % sentences.length;
     sentenceCharIndex = 0;
