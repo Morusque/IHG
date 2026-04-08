@@ -1,16 +1,14 @@
 
-// a = Ajoute une note
+// a = ajoute une note
 // z = ajoute une barre de mesure
+// e = start/stop une portée
+// r = une note tombe
 
-// f  = Couleur de fond
-// p = Change la hauteur de la portée
+// f = couleur de fond
+// p = change la hauteur de la portée
+// q = mitraille les notes
 
-// e = Fin de la portée
-// r = début de la portée
-
-// q = Mitraille les notes
-
-// Constants for the staff
+// constants for the staff
 int numLines = 5;
 float lineSpacing = 100;
 float staffHeight = (numLines - 1) * lineSpacing;
@@ -53,12 +51,13 @@ boolean continuousNotes = false;
 int continuousNotesRate = 5;
 
 float mBarToNoteMargin = 100;
+float mBarToBarMargin = 100;
 
 boolean staffActiveRight = false;
 boolean staffActiveLeft = false;
 
 boolean waving = false;
-
+boolean eKeyDown = false;
 void setup() {
   fullScreen(P2D, Integer.parseInt(loadStrings(dataPath("../../../params.txt"))[1]));
   frameRate(60);
@@ -157,25 +156,31 @@ void drawStaff() {
   float currentX=0;
   boolean drawing = staffActiveLeft;
   while (currentX<width) {
-    // find next event
-    MeasureBar nextBar = null;
+    // find the next bar position from left to right
+    float nextX = Float.MAX_VALUE;
     for (MeasureBar m : measureBars) {
-      if (m.x>currentX) {
-        nextBar = m;
-        break;
+      if (m.x>currentX && m.x<nextX) {
+        nextX = m.x;
       }
     }
-    if (nextBar!=null) {
+
+    if (nextX != Float.MAX_VALUE) {
       if (drawing) {
         // draw the lines
         for (int i = 0; i < numLines; i++) {
           float y = i * lineSpacing;
-          line(currentX, y, nextBar.x, y);
+          line(currentX, y, nextX, y);
         }
       }
-      currentX = nextBar.x;
-      if (nextBar.type==2) drawing = true;
-      if (nextBar.type==1) drawing = false;
+
+      // Apply every bar at this position in insertion order.
+      for (MeasureBar m : measureBars) {
+        if (abs(m.x-nextX) < 0.01f) {
+          if (m.type==2) drawing = true;
+          if (m.type==1) drawing = false;
+        }
+      }
+      currentX = nextX;
     } else {
       if (drawing && staffActiveRight) {
         // draw the lines
@@ -284,7 +289,7 @@ class MeasureBar {
   MeasureBar(int type) {
     this.type = type;
     this.x = width;
-    // move x right until it doesn't collide with any note within some margin
+    // move x right until it doesn't collide with queued notes or other bars
     while (true) {
       boolean collision = false;
       for (Note n : notes) {
@@ -292,6 +297,14 @@ class MeasureBar {
         if (n.x-n.imHead.width/2*n.scale-mBarToNoteMargin<x && n.x+n.imHead.width/2*n.scale+mBarToNoteMargin>x) {
           collision = true;
           break;
+        }
+      }
+      if (!collision) {
+        for (MeasureBar m : measureBars) {
+          if (abs(m.x-x) < mBarToBarMargin) {
+            collision = true;
+            break;
+          }
         }
       }
       if (collision) x+=1;
@@ -370,16 +383,16 @@ void keyPressed() {
   if (key=='z') {
     measureBars.add(new MeasureBar(0));
   }
-  if (key=='r') {
-    measureBars.add(new MeasureBar(2));
-  }
   if (key=='e') {
-    measureBars.add(new MeasureBar(1));
+    if (!eKeyDown) {
+      measureBars.add(new MeasureBar(staffActiveRight ? 1 : 2));
+      eKeyDown = true;
+    }
   }
   if (key=='q') {
     continuousNotes = true;
   }
-  if (key=='t') {
+  if (key=='r') {
     if (notes.size()>0) notes.get(floor(random(notes.size()))).ySpeedD+=2.0;
   }
 }
@@ -387,6 +400,9 @@ void keyPressed() {
 void keyReleased() {
   if (key=='q') {
     continuousNotes = false;
+  }
+  if (key=='e') {
+    eKeyDown = false;
   }
   if (key=='p') {
     waving = false;
@@ -397,6 +413,7 @@ void darkMode(boolean d) {
   dark = d;
   notes.clear();
   measureBars.clear();
+  staffActiveRight = false;
   staffActiveLeft = false;
   MeasureBar startBar = new MeasureBar(2);
   measureBars.add(startBar);
