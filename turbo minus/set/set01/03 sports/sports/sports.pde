@@ -169,6 +169,9 @@ void keyPressed() {
       restart();
     }
   }
+  if (key=='n') {
+    background(0xFF);
+  }
   if (key=='p') {
     // add a sprite somewhere
     synchronized(spritesIm) {

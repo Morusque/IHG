@@ -10,7 +10,7 @@ float persoTimer = 0.0;
 boolean dark = false;
 
 void setup() {
-  fullScreen(P2D, 2);
+  fullScreen(P2D, Integer.parseInt(loadStrings(dataPath("../../params.txt"))[1]));
   perso = loadImage(dataPath("perso/yoga-detoure.png"));
   String[] fs = getAllFilesFrom(dataPath("shapes"));
   for (int i=0; i<fs.length; i++) {
