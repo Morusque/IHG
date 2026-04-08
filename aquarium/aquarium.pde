@@ -1,104 +1,272 @@
 
-ArrayList<String> doneUrls = new ArrayList<String>();
+import java.util.ArrayDeque;
+import java.util.HashSet;
+
+HashSet<String> doneUrls = new HashSet<String>();
 ArrayList<Anim> anims = new ArrayList<Anim>();
 
-int animMode = 0;
-
 int currentAnim = 0;
-int currentAnim2 = 0;
 
-color bgColor = color(0x50, 0x50, 0xE0);
-int framePhase = 0;
-int framePhase2 = 50;
+color bgColor = color(0x90, 0xF0, 0xB0);
 
-boolean numericMode = false;// numeric or scan
+final int DISPLAY_MODE_DURATION = 100;
+DisplayMode[] displayModes;
+int currentDisplayModeIndex = 0;
+DisplayMode currentDisplayMode;
+
+LayoutType layoutType = LayoutType.MILLE_FORMES;
+
+boolean exportFramesForAnim = false;
+
+float generateGamma = 0.82;
+float generateMinRadius = 65;
+float generateCalibrationHalfSize = 210;
+float generateRadiusMargin = 16;
+float generateDistinctnessThreshold = 12;
+int generateMaxDistinctnessAttempts = 40;
+
+PImage[] corner = new PImage[4];
+float borderMargins = 130;
+PImage hubble;
 
 void setup() {
   // size(1485, 1050);
   fullScreen(2);
-  frameRate(7);
+  frameRate(13);
+  corner[0] = loadImage(dataPath("files/corner01.png"));
+  corner[1] = loadImage(dataPath("files/corner02.png"));
+  corner[2] = loadImage(dataPath("files/corner03.png"));
+  corner[3] = loadImage(dataPath("files/corner04.png"));
+  hubble = loadImage(dataPath("files/hubble01.png"));
   background(bgColor);
+  initDisplayModes();
+  thread("loadImages");
 }
 
 void draw() {
-  // background(0xFF);
-  /*
-  for (int i=0; i<6; i++) {
-   if (currentAnim+i<anims.size()) {
-   image(anims.get(currentAnim+i).images[frameCount%anims.get(currentAnim+i).images.length], (i%3)*1485/3, floor((float)i/3)*1050/2);
-   }
-   }
-   */
   if (anims.size()>0) {
-    if (framePhase>=100) {
-      currentAnim = (currentAnim+1)%anims.size();
-      framePhase=0;
-      animMode = (animMode+1)%3;
-      bgColor = color(0x50+random(-20, 20), 0x50+random(-20, 20), 0xE0+random(-20, 20));
-    }
-    if (framePhase2>=100) {
-      currentAnim2 = floor(random(anims.size()));
-      framePhase2=0;
-    }
-    if (animMode==0) {
-      background(bgColor);
-      imageMode(CENTER);
-      PImage currentIm = anims.get(currentAnim).images[framePhase%anims.get(currentAnim).images.length];
-      pushMatrix();
-      translate(width/2+(framePhase-50)*20, height*1/3);
-      scale((50.0-abs((float)framePhase-50.0))*1.5/50.0);
-      rotate(((float)framePhase-50.0)/50);
-      image(currentIm, 0, 0);
-      popMatrix();
-      PImage currentIm2 = anims.get(currentAnim2).images[framePhase%anims.get(currentAnim2).images.length];
-      pushMatrix();
-      translate(width/2-(framePhase2-50)*20, height*2/3);
-      scale((50.0-abs((float)framePhase2-50.0))*1.5/50.0);
-      rotate(((float)framePhase2-50.0)/50);
-      image(currentIm2, 0, 0);
-      popMatrix();
-      framePhase++;
-      framePhase2++;
-    }
-    if (animMode==1) {
-      background(bgColor);
-      imageMode(CENTER);
-      for (int i=0; i<10; i++) {
-        PImage currentIm = anims.get(currentAnim).images[(framePhase+i)%anims.get(currentAnim).images.length];
-        pushMatrix();
-        translate(width/2+cos((float)i/10*TWO_PI)*300, height*1/2+sin((float)i/10*TWO_PI)*300);
-        scale((50.0-abs((float)framePhase-50.0))*0.7/50.0);
-        rotate(((float)framePhase-50.0)/50);
-        image(currentIm, 0, 0);
-        popMatrix();
+    if (currentDisplayMode.isDone()) goToNextDisplayMode();
+    currentDisplayMode.drawFrame();
+  }
+  if (exportFramesForAnim) saveFrame(dataPath("result/####.png"));
+  // borders
+  noStroke();
+  fill(0);
+  rect(0, 0, borderMargins, height);
+  rect(width-borderMargins, 0, borderMargins, height);
+  rect(0, 0, width, borderMargins);
+  rect(0, height-borderMargins, width, borderMargins);
+  imageMode(CORNER);
+  image(corner[0], borderMargins, borderMargins);
+  image(corner[1], width-corner[1].width-borderMargins, borderMargins);
+  image(corner[2], borderMargins, height-corner[2].height-borderMargins);
+  image(corner[3], width-corner[3].width-borderMargins, height-corner[2].height-borderMargins);
+  // image(hubble, 0, 0);
+}
+
+void initDisplayModes() {
+  displayModes = new DisplayMode[] {
+    new PassingMode(),
+    new CircleMode(),
+    new GridMode(),
+    new SpiralMode(),
+    new StairsMode(),
+    new SingleBounceMode(),
+    new SymmetryMode(),
+    new EdgeTravelMode(),
+    new RainMode(),
+    new BackForthMode(),
+    new RotateMode(),
+    new FullMode()
+  };
+  currentDisplayModeIndex = 0;
+  currentDisplayMode = displayModes[currentDisplayModeIndex];
+  currentDisplayMode.enter();
+}
+
+void goToNextDisplayMode() {
+  currentAnim = (currentAnim+1)%anims.size();
+  bgColor = color(0x90+random(-20, 20), 0xF0+random(-20, 20), 0xB0+random(-20, 15));
+  if (random(100)<5) bgColor = color(random(0x80,0xFF),random(0x80,0xFF),random(0x80,0xFF));
+  currentDisplayModeIndex = (currentDisplayModeIndex+1)%displayModes.length;
+  currentDisplayMode = displayModes[currentDisplayModeIndex];
+  currentDisplayMode.enter();
+  println("enter mode "+currentDisplayMode.getClass());
+}
+
+int wrapIndex(int value, int size) {
+  if (size<=0) {
+    return 0;
+  }
+  return (value%size+size)%size;
+}
+
+int pingPongIndex(int value, int size) {
+  if (size<=1) {
+    return 0;
+  }
+  int cycle = (size-1)*2;
+  int wrapped = wrapIndex(value, cycle);
+  if (wrapped>=size) {
+    return cycle-wrapped;
+  }
+  return wrapped;
+}
+
+int randomAnimIndex() {
+  return floor(random(anims.size()));
+}
+
+int relatedAnimIndex(int step) {
+  int variantCount = max(1, min(anims.size(), 3));
+  return wrapIndex(currentAnim+wrapIndex(step, variantCount), anims.size());
+}
+
+PImage getAnimFrame(int animIndex, int frameIndex) {
+  Anim anim = anims.get(wrapIndex(animIndex, anims.size()));
+  return anim.images[wrapIndex(frameIndex, anim.images.length)];
+}
+
+void drawAnimFrame(int animIndex, int frameIndex, float x, float y, float scaleValue, float rotation, boolean flipHorizontal, boolean flipVertical) {
+  PImage im = getAnimFrame(animIndex, frameIndex);
+  pushMatrix();
+  translate(x, y);
+  rotate(rotation);
+  scale((flipHorizontal ? -1 : 1)*scaleValue, (flipVertical ? -1 : 1)*scaleValue);
+  image(im, 0, 0);
+  popMatrix();
+}
+
+float perimeterLength(float margin) {
+  float usableWidth = max(1, width-margin*2);
+  float usableHeight = max(1, height-margin*2);
+  return 2*(usableWidth+usableHeight);
+}
+
+PVector perimeterPosition(float distance, float margin) {
+  float usableWidth = max(1, width-margin*2);
+  float usableHeight = max(1, height-margin*2);
+  float loop = perimeterLength(margin);
+  float wrapped = (distance%loop+loop)%loop;
+  if (wrapped<usableWidth) {
+    return new PVector(margin+wrapped, margin);
+  }
+  wrapped -= usableWidth;
+  if (wrapped<usableHeight) {
+    return new PVector(width-margin, margin+wrapped);
+  }
+  wrapped -= usableHeight;
+  if (wrapped<usableWidth) {
+    return new PVector(width-margin-wrapped, height-margin);
+  }
+  wrapped -= usableWidth;
+  return new PVector(margin, height-margin-wrapped);
+}
+
+float perimeterDirection(float distance, float margin) {
+  float usableWidth = max(1, width-margin*2);
+  float usableHeight = max(1, height-margin*2);
+  float loop = perimeterLength(margin);
+  float wrapped = (distance%loop+loop)%loop;
+  if (wrapped<usableWidth) {
+    return 0;
+  }
+  wrapped -= usableWidth;
+  if (wrapped<usableHeight) {
+    return HALF_PI;
+  }
+  wrapped -= usableHeight;
+  if (wrapped<usableWidth) {
+    return PI;
+  }
+  return HALF_PI*3;
+}
+
+float generateMaxRadius() {
+  return max(1, generateCalibrationHalfSize-generateRadiusMargin);
+}
+
+float averageLengthDifference(float[] shapeA, float[] shapeB) {
+  float total = 0;
+  for (int i=0; i<shapeA.length; i++) {
+    total += abs(shapeA[i]-shapeB[i]);
+  }
+  return total/max(1, shapeA.length);
+}
+
+boolean shapesAreDistinctEnough(float[][] lengths) {
+  for (int a=0; a<lengths.length; a++) {
+    for (int b=a+1; b<lengths.length; b++) {
+      if (averageLengthDifference(lengths[a], lengths[b])<generateDistinctnessThreshold) {
+        return false;
       }
-      framePhase++;
-    }
-    if (animMode==2) {
-      background(bgColor);
-      imageMode(CENTER);
-      int nbX = 6;
-      int nbY = 5;
-      for (int x=0; x<nbX; x++) {
-        for (int y=0; y<nbY; y++) {
-          PImage currentIm = anims.get(((currentAnim+x+y))%anims.size()).images[(framePhase+x+y)%anims.get(((currentAnim+x+y))%anims.size()).images.length];
-          pushMatrix();
-          translate((x+1)*width/(nbX+1), (y+1)*height/(nbY+1));
-          scale(max((50.0-abs((float)framePhase+(x*y)-50.0))*0.5/50.0, 0));
-          rotate(((float)framePhase-50.0)/50);
-          try {
-            image(currentIm, 0, 0);
-          }
-          catch(Exception e) {
-            println(e);
-          }
-          popMatrix();
-        }
-      }
-      framePhase++;
     }
   }
-  // saveFrame(dataPath("result/####.png"));
+  return true;
+}
+
+enum LayoutType {
+  PAPER_01,
+    NUMERIC_01,
+    WEIRDLY_PRINTED,
+    BOUSCULADE,
+    MILLE_FORMES
+}
+
+class LayoutConfig {
+  int nbX;
+  int nbY;
+  int startX;
+  int startY;
+  int sizeX;
+  int sizeY;
+  int spaceX;
+  int spaceY;
+
+  LayoutConfig(int nbX, int nbY, int startX, int startY, int sizeX, int sizeY, int spaceX, int spaceY) {
+    this.nbX = nbX;
+    this.nbY = nbY;
+    this.startX = startX;
+    this.startY = startY;
+    this.sizeX = sizeX;
+    this.sizeY = sizeY;
+    this.spaceX = spaceX;
+    this.spaceY = spaceY;
+  }
+
+  int frameCount() {
+    return nbX*nbY;
+  }
+}
+
+LayoutConfig getLayoutConfig(LayoutType type) {// int nbX, int nbY, int startX, int startY, int sizeX, int sizeY, int spaceX, int spaceY
+  if (type==LayoutType.BOUSCULADE) {
+    return new LayoutConfig(4, 3, 65, 32, 520, 520, 525, 525);
+  }
+  if (type==LayoutType.WEIRDLY_PRINTED) {
+    return new LayoutConfig(3, 2, 189, 167, 569, 569, 703, 745);
+  }
+  if (type==LayoutType.NUMERIC_01) {
+    return new LayoutConfig(3, 2, 47, 62, 401, 401, 495, 525);
+  }
+  if (type==LayoutType.MILLE_FORMES) {
+    //return new LayoutConfig(3, 2, 95, 111, 639, 632, 753, 790);
+    return new LayoutConfig(3, 2, 53, 81, 661, 661, 778, 826);
+  }
+  return new LayoutConfig(3, 2, 109, 125, 615, 615, 761, 803);
+}
+
+String processedFramePath(String fileName, int frameNb) {
+  return dataPath("processed/"+"p_"+fileName+"_"+nf(frameNb, 2)+".png");
+}
+
+boolean hasProcessedFrames(String fileName, LayoutConfig layout) {
+  for (int i=0; i<layout.frameCount(); i++) {
+    if (!new File(processedFramePath(fileName, i)).exists()) {
+      return false;
+    }
+  }
+  return true;
 }
 
 void exportSingles() {
@@ -121,83 +289,101 @@ void generate() {
   PGraphics export = createGraphics(1485, 1050);
   export.beginDraw();
   int nbPoints = 1000;
-  nbPoints = floor(3+random(random(1000)));
-  int nbX = 3;
-  int nbY = 2;
-  // <export for bousculade>
-  nbX = 4;
-  nbY = 3;
-  // </export for bousculade>
+  nbPoints = floor(3+random(random(2000)));
+  LayoutConfig layout = getLayoutConfig(layoutType);
+  int nbX = layout.nbX;
+  int nbY = layout.nbY;
   int nbFrames = nbX*nbY;
   float[][] lengths = new float[nbFrames][nbPoints];
-  Oscillator[] oscs = new Oscillator[20];
-  for (int i=0; i<oscs.length; i++) {
-    oscs[i] = new Oscillator();
+  float maxRadius = generateMaxRadius();
+  if (generateMinRadius>=maxRadius) {
+    println("invalid generate radius settings");
+    export.endDraw();
+    return;
   }
-  float minLength = -1;
-  float maxLength = -1;
-  for (int f=0; f<nbFrames; f++) {
-    for (int i=0; i<nbPoints; i++) {
-      float value = 100;
-      for (int j=0; j<oscs.length; j++) value += oscs[j].value(((float)i/nbPoints), ((float)f/nbFrames))*50;
-      lengths[f][i] = value;
-      if (minLength==-1||minLength>value) minLength = value;
-      if (maxLength==-1||maxLength<value) maxLength = value;
+  boolean distinctEnough = false;
+  for (int attempt=0; attempt<generateMaxDistinctnessAttempts && !distinctEnough; attempt++) {
+    Oscillator[] oscs = new Oscillator[20];
+    for (int i=0; i<oscs.length; i++) {
+      oscs[i] = new Oscillator();
     }
+    float minLength = -1;
+    float maxLength = -1;
+    for (int f=0; f<nbFrames; f++) {
+      for (int i=0; i<nbPoints; i++) {
+        float value = 100;
+        for (int j=0; j<oscs.length; j++) value += oscs[j].value(((float)i/nbPoints), ((float)f/nbFrames))*50;
+        lengths[f][i] = value;
+        if (minLength==-1||minLength>value) minLength = value;
+        if (maxLength==-1||maxLength<value) maxLength = value;
+      }
+    }
+    for (int f=0; f<nbFrames; f++) {
+      for (int i=0; i<nbPoints; i++) {
+        float normalizedLength = 0.5;
+        if (minLength!=maxLength) {
+          normalizedLength = constrain(map(lengths[f][i], minLength, maxLength, 0, 1), 0, 1);
+        }
+        normalizedLength = pow(normalizedLength, generateGamma);
+        lengths[f][i] = map(normalizedLength, 0, 1, generateMinRadius, maxRadius);
+      }
+    }
+    distinctEnough = shapesAreDistinctEnough(lengths);
   }
-  for (int f=0; f<nbFrames; f++) {
-    for (int i=0; i<nbPoints; i++) {
-      lengths[f][i] = map(lengths[f][i], minLength, maxLength, 30, 140);// 50, 180
-    }
+  if (!distinctEnough) {
+    println("warning: generate() kept the best available frame set after retry limit");
   }
   export.background(0xFF);
   export.noFill();
   export.stroke(0);
   int frameNb = 0;
 
+  boolean exportCalibration = false;
+  boolean exportOrthoMode = false;
 
-  /*
-  for (int y=0; y<nbY; y++) {
-   for (int x=0; x<nbX; x++) {
-   for (int i=0; i<nbPoints; i++) {
-   float a = (float)i/nbPoints*TWO_PI;
-   float a2 = ((float)(i+1)%nbPoints)/nbPoints*TWO_PI;
-   PVector middle = new PVector((float)export.width*(x+0.5)/nbX, (float)export.height*(y+0.5)/nbY);
-   export.strokeWeight(4);
-   export.line(middle.x+cos(a)*lengths[frameNb][i], middle.y+sin(a)*lengths[frameNb][i], middle.x+cos(a2)*lengths[frameNb][(i+1)%nbPoints], middle.y+sin(a2)*lengths[frameNb][(i+1)%nbPoints]);
-   export.strokeWeight(1);
-   export.rect(middle.x-200, middle.y-200, 200*2, 200*2); // for calibration
-   }
-   frameNb++;
-   }
-   }
-   */
-
-
-  for (int y=0; y<nbY; y++) {
-    for (int x=0; x<nbX; x++) {
-      for (int i=0; i<nbPoints; i++) {
-        float a = (float)i/nbPoints*TWO_PI;
-        float a2 = ((float)(i+1)%nbPoints)/nbPoints*TWO_PI;
+  if (!exportOrthoMode) {
+    for (int y=0; y<nbY; y++) {
+      for (int x=0; x<nbX; x++) {
         PVector middle = new PVector((float)export.width*(x+0.5)/nbX, (float)export.height*(y+0.5)/nbY);
-        export.strokeWeight(4);
-        //export.line(middle.x+cos(a)*lengths[frameNb][i], middle.y+sin(a)*lengths[frameNb][i], middle.x+cos(a2)*lengths[frameNb][(i+1)%nbPoints], middle.y+sin(a2)*lengths[frameNb][(i+1)%nbPoints]);
-        export.line(middle.x+cos(a)*lengths[frameNb][i], middle.y+sin(a)*lengths[frameNb][i], middle.x+cos(a2)*lengths[frameNb][(i+1)%nbPoints], middle.y+sin(a)*lengths[frameNb][i]);
-        export.line(middle.x+cos(a2)*lengths[frameNb][(i+1)%nbPoints], middle.y+sin(a)*lengths[frameNb][i], middle.x+cos(a2)*lengths[frameNb][(i+1)%nbPoints], middle.y+sin(a2)*lengths[frameNb][(i+1)%nbPoints]);
-        export.strokeWeight(1);
-        export.rect(middle.x-160, middle.y-160, 160*2, 160*2); // for calibration
+        for (int i=0; i<nbPoints; i++) {
+          float a = (float)i/nbPoints*TWO_PI;
+          float a2 = ((float)(i+1)%nbPoints)/nbPoints*TWO_PI;
+          export.strokeWeight(13);
+          export.line(middle.x+cos(a)*lengths[frameNb][i], middle.y+sin(a)*lengths[frameNb][i], middle.x+cos(a2)*lengths[frameNb][(i+1)%nbPoints], middle.y+sin(a2)*lengths[frameNb][(i+1)%nbPoints]);
+        }
+        if (exportCalibration) {
+          export.strokeWeight(1);
+          export.rect(middle.x-generateCalibrationHalfSize, middle.y-generateCalibrationHalfSize, generateCalibrationHalfSize*2, generateCalibrationHalfSize*2); // for calibration
+        }
+        frameNb++;
       }
-      frameNb++;
+    }
+  } else {
+    for (int y=0; y<nbY; y++) {
+      for (int x=0; x<nbX; x++) {
+        PVector middle = new PVector((float)export.width*(x+0.5)/nbX, (float)export.height*(y+0.5)/nbY);
+        for (int i=0; i<nbPoints; i++) {
+          float a = (float)i/nbPoints*TWO_PI;
+          float a2 = ((float)(i+1)%nbPoints)/nbPoints*TWO_PI;
+          export.strokeWeight(13);
+          export.line(middle.x+cos(a)*lengths[frameNb][i], middle.y+sin(a)*lengths[frameNb][i], middle.x+cos(a2)*lengths[frameNb][(i+1)%nbPoints], middle.y+sin(a)*lengths[frameNb][i]);
+          export.line(middle.x+cos(a2)*lengths[frameNb][(i+1)%nbPoints], middle.y+sin(a)*lengths[frameNb][i], middle.x+cos(a2)*lengths[frameNb][(i+1)%nbPoints], middle.y+sin(a2)*lengths[frameNb][(i+1)%nbPoints]);
+        }
+        if (exportCalibration) {
+          export.strokeWeight(1);
+          export.rect(middle.x-generateCalibrationHalfSize, middle.y-generateCalibrationHalfSize, generateCalibrationHalfSize*2, generateCalibrationHalfSize*2); // for calibration
+        }
+        frameNb++;
+      }
     }
   }
-
 
   export.textSize(25);
   export.fill(0);
   export.text("H", 7, 30);
   export.text("B", export.width-20, export.height-10);
   export.endDraw();
-  export.save(dataPath("exports/img_"+nf(nbExported++, 4)+".png"));
+  export.save(dataPath("exports/img_"+nf(nbExported++, 4)+".tiff"));
   println("done");
 }
 
@@ -226,18 +412,19 @@ class Oscillator {
 int nbExported = 0;
 void keyPressed() {
   if (key == 'e') {
-    generate();
+    for (int i=0; i<1; i++) generate();
   }
   if (keyCode == CONTROL) {
-    // thread("loadImages");
-    loadImages();
+    thread("loadImages");
+    // loadImages();
   }
   if (keyCode == RIGHT) {
-    framePhase=100;
+    currentDisplayMode.forceComplete();
   }
-  if (key == 'g') {
-    numericMode ^= true;
-    println("numeric : "+numericMode);
+  if (key == 'g') {// cycles through display modes
+    LayoutType[] layoutTypes = LayoutType.values();
+    layoutType = layoutTypes[(layoutType.ordinal()+1)%layoutTypes.length];
+    println("layout type : "+layoutType);
   }
   if (key == 's') {
     exportSingles();
@@ -247,70 +434,37 @@ void keyPressed() {
 void loadImages() {
   println("loading...");
   String[] inputUrl = getAllFilesFrom(dataPath("input"));
+  LayoutConfig layout = getLayoutConfig(layoutType);
   for (int i=0; i<inputUrl.length; i++) {
-    if (!inArray(doneUrls.toArray(new String[doneUrls.size()]), inputUrl[i])) {
+    if (!doneUrls.contains(inputUrl[i])) {
       println("file : "+inputUrl[i]);
-      String fileName = inputUrl[i].substring(dataPath("input").length()+1, inputUrl[i].length()-4);
-      if (new File(dataPath("processed/"+"p_"+fileName+"_01"+".png")).exists()) {
-        Anim anim = new Anim();
-        anim.images = new PImage[6];
-        for (int j=0; j < anim.images.length; j++) {
-          anim.images[j] = loadImage(dataPath("processed/"+"p_"+fileName+"_"+nf(j, 2)+".png"));
-        }
-        anims.add(anim);
-      } else {
-        PImage im = loadImage(inputUrl[i]);
-        Anim anim = new Anim();
-        //anim.images = new PImage[6];
-        anim.images = new PImage[12];
-        int nbX = 3;
-        int nbY = 2;
-        int startX = 109;
-        int startY = 125;
-        int sizeX = 615;
-        int sizeY = 615;
-        int spaceX = 761;
-        int spaceY = 803;
-        int frameNb = 0;
-        // bousculade mode
-        /*
-        nbX = 4;
-         nbY = 3;
-         startX = 65;
-         startY = 32;
-         sizeX = 520;
-         sizeY = 520;
-         spaceX = 525;
-         spaceY = 525;
-         */
-        // weirdly printed mode
-        /*
-        startX = 189;
-         startY = 167;
-         sizeX = 569;
-         sizeY = 569;
-         spaceX = 703;
-         spaceY = 745;
-         */
-        if (numericMode) {
-          startX = 47;
-          startY = 62;
-          sizeX = 401;
-          sizeY = 401;
-          spaceX = 495;
-          spaceY = 525;
-        }
-        for (int y=0; y<nbY; y++) {
-          for (int x=0; x<nbX; x++) {
-            PImage cutted = cutShape(im.get(startX+spaceX*x, startY+spaceY*y, sizeX, sizeY));
-            anim.images[frameNb] = cutted;
-            cutted.save(dataPath("processed/"+"p_"+fileName+"_"+nf(frameNb, 2)+".png"));
-            frameNb++;
+      try {
+        String fileName = inputUrl[i].substring(dataPath("input").length()+1, inputUrl[i].length()-4);
+        if (hasProcessedFrames(fileName, layout)) {
+          Anim anim = new Anim(layout.frameCount());
+          for (int j=0; j < anim.images.length; j++) {
+            anim.images[j] = loadImage(processedFramePath(fileName, j));
           }
+          anims.add(anim);
+        } else {
+          PImage im = loadImage(inputUrl[i]);
+          Anim anim = new Anim(layout.frameCount());
+          int frameNb = 0;
+          for (int y=0; y<layout.nbY; y++) {
+            for (int x=0; x<layout.nbX; x++) {
+              PImage cutted = cutShape(im.get(layout.startX+layout.spaceX*x, layout.startY+layout.spaceY*y, layout.sizeX, layout.sizeY));
+              anim.images[frameNb] = cutted;
+              cutted.save(processedFramePath(fileName, frameNb));
+              frameNb++;
+            }
+          }
+          anims.add(anim);
         }
-        anims.add(anim);
+        doneUrls.add(inputUrl[i]);
       }
-      doneUrls.add(inputUrl[i]);
+      catch (Exception e) {
+        println(e);
+      }
     }
   }
   println("...done");
@@ -319,8 +473,10 @@ void loadImages() {
 PImage cutShape(PImage oIm) {
   PImage im = oIm.get();
   // crop borders
-  int margin = min(min(0, floor((float)im.width/2)), floor((float)im.height/2));
-  im = im.get(margin, margin, im.width-margin*2, im.height-margin*2);
+  int margin = min(2, max(0, min(im.width, im.height)/2-1));
+  if (margin>0) {
+    im = im.get(margin, margin, im.width-margin*2, im.height-margin*2);
+  }
   // crop shape
   int startX = 0;
   int startY = 0;
@@ -393,36 +549,26 @@ PImage cutShape(PImage oIm) {
     done[i] = false;
     toErase[i] = false;
   }
-  ArrayList<Integer> toCheck = new ArrayList<Integer>();
+  ArrayDeque<Integer> toCheck = new ArrayDeque<Integer>();
   toCheck.add(0);
   done[0] = true;
   while (toCheck.size()>0) {
     // println((float)toCheck.size()/done.length);
     /*
-    if (toCheck.size()<50) {
+           if (toCheck.size()<50) {
      for (int i : toCheck) print(i+",");
      println("-");
      }
      */
-    int thisIndex = toCheck.remove(0);
+    int thisIndex = toCheck.removeFirst();
     if (empty[thisIndex]) {
       toErase[thisIndex] = true;
-      if (!done[(thisIndex-1+done.length)%done.length]) {
-        toCheck.add((thisIndex-1+done.length)%done.length);
-        done[(thisIndex-1+done.length)%done.length] = true;
-      }
-      if (!done[(thisIndex+1+done.length)%done.length]) {
-        toCheck.add((thisIndex+1+done.length)%done.length);
-        done[(thisIndex+1+done.length)%done.length] = true;
-      }
-      if (!done[(thisIndex-im.width+done.length)%done.length]) {
-        toCheck.add((thisIndex-im.width+done.length)%done.length);
-        done[(thisIndex-im.width+done.length)%done.length] = true;
-      }
-      if (!done[(thisIndex+im.width+done.length)%done.length]) {
-        toCheck.add((thisIndex+im.width+done.length)%done.length);
-        done[(thisIndex+im.width+done.length)%done.length] = true;
-      }
+      int x = thisIndex%im.width;
+      int y = thisIndex/im.width;
+      enqueueIfNeeded(x-1, y, im.width, im.height, toCheck, done);
+      enqueueIfNeeded(x+1, y, im.width, im.height, toCheck, done);
+      enqueueIfNeeded(x, y-1, im.width, im.height, toCheck, done);
+      enqueueIfNeeded(x, y+1, im.width, im.height, toCheck, done);
     }
   }
   PGraphics mask = createGraphics(im.width, im.height, JAVA2D);
@@ -433,7 +579,11 @@ PImage cutShape(PImage oIm) {
       if (toErase[x+y*im.width]) mask.stroke(0);
       for (int x2=-1; x2<2; x2++) {
         for (int y2=-1; y2<2; y2++) {
-          if (toErase[((x+x2)+(y+y2)*im.width+toErase.length)%toErase.length]) mask.stroke(0);
+          int neighborX = x+x2;
+          int neighborY = y+y2;
+          if (neighborX>=0 && neighborX<im.width && neighborY>=0 && neighborY<im.height && toErase[neighborX+neighborY*im.width]) {
+            mask.stroke(0);
+          }
         }
       }
       mask.point(x, y);
@@ -447,4 +597,19 @@ PImage cutShape(PImage oIm) {
 
 class Anim {
   PImage[] images;
+
+  Anim(int nbImages) {
+    images = new PImage[nbImages];
+  }
+}
+
+void enqueueIfNeeded(int x, int y, int width, int height, ArrayDeque<Integer> toCheck, boolean[] done) {
+  if (x<0 || x>=width || y<0 || y>=height) {
+    return;
+  }
+  int index = x+y*width;
+  if (!done[index]) {
+    toCheck.addLast(index);
+    done[index] = true;
+  }
 }
