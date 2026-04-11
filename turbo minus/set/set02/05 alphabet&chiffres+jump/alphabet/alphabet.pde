@@ -5,8 +5,9 @@
 // BAS resymc autotempo
 // BACKSPACE  dark bg
 // ENTER  display next letter
-// ^  background motif
-// $  background uni
+// ^  background uni
+// $  background motif
+// =  place mode
 // ù  autotempo
 
 ArrayList<Letter> letters = new ArrayList<Letter>();
@@ -26,11 +27,14 @@ int xPosChainCounter = 0;
 boolean[] keys = new boolean[65536];
 
 String[] sentences = new String[]{
-  "abcdefghijklmnopqrstuvwxyz",
-  "hello world"
+  "abcdefghijklmnopqrstuvwxyz"
 };
 int sentenceIndex = 0;
 int sentenceCharIndex = 0;
+
+int placeMode = 0;// 0 = center, 1 = crows
+
+int bgType = 0;// 0 = uni, 1 = motif
 
 color[] typicalColors = new color[]{
   color(0),
@@ -49,15 +53,21 @@ ArrayList<PImage> motifs = new ArrayList<PImage>();
 PImage[] currentMotif = new PImage[2];
 
 double defaultTempo = 107.2;// BPM
-double autoTempo = defaultTempo;
+double autoTempo = -1;
 double tempoBeats = 1;
 double tempoCounter = 0;
 
 float highestPic = 0;
 
+String[] decks;
+int currentDeckIndex = 0;
+
 void setup() {
   fullScreen(P2D, Integer.parseInt(loadStrings(dataPath("../../../params.txt"))[1]));
   frameRate(60);
+  // load all subfolders inside dataPath and put them in decks
+  decks = getSubfolders(dataPath(""));
+  decks = sort(decks);
   thread("loadImages");
   thread("loadMotifs");
 }
@@ -92,50 +102,49 @@ void draw() {
 }
 
 void loadImages() {
-  String path = dataPath("letters");
-  for (String letter : getSubfolders(path)) {
-    Letter l = new Letter();
-    l.letter = letter;
-    if (l.letter.equals("plus")) l.letter = "+";
-    if (l.letter.equals("minus")) l.letter = "-";
-    if (l.letter.equals("interrogation")) l.letter = "?";
-    if (l.letter.equals("equals")) l.letter = "=";
-    if (l.letter.equals("exclamation")) l.letter = "!";
-    if (l.letter.equals("dot")) l.letter = ".";
-    if (l.letter.equals("comma")) l.letter = ",";
-    if (l.letter.equals("semicolon")) l.letter = ";";
-    if (l.letter.equals("colon")) l.letter = ":";
-    if (l.letter.equals("apostrophe")) l.letter = "'";
-    if (l.letter.equals("quote")) l.letter = "\"";
-    if (l.letter.equals("hyphen")) l.letter = "-";
-    if (l.letter.equals("slash")) l.letter = "/";
-    if (l.letter.equals("backslash")) l.letter = "\\";
-    if (l.letter.equals("pipe")) l.letter = "|";
-    if (l.letter.equals("underscore")) l.letter = "_";
-    if (l.letter.equals("multiplication")) l.letter = "*";
-    if (l.letter.equals("amperstand")) l.letter = "&";
-    if (l.letter.equals("percent")) l.letter = "%";
-    if (l.letter.equals("dollar")) l.letter = "$";
-    if (l.letter.equals("hash")) l.letter = "#";
-    if (l.letter.equals("at")) l.letter = "@";
-    // use getFiles(path + "/" + letter) to get all files in the subfolder
-    String[] files = getAllFilesFrom(path + "/" + letter);
-    files = sort(files);
-    for (String file : files) {
-      try {
-        PImage im = loadImage(file);
-        if (im != null) {
-          synchronized (letters) {
+  synchronized (letters) {
+    String path = dataPath(decks[currentDeckIndex]+"/letters");
+    letters.clear();
+    for (String letter : getSubfolders(path)) {
+      Letter l = new Letter();
+      l.letter = letter;
+      if (l.letter.equals("plus")) l.letter = "+";
+      if (l.letter.equals("minus")) l.letter = "-";
+      if (l.letter.equals("interrogation")) l.letter = "?";
+      if (l.letter.equals("equals")) l.letter = "=";
+      if (l.letter.equals("exclamation")) l.letter = "!";
+      if (l.letter.equals("dot")) l.letter = ".";
+      if (l.letter.equals("comma")) l.letter = ",";
+      if (l.letter.equals("semicolon")) l.letter = ";";
+      if (l.letter.equals("colon")) l.letter = ":";
+      if (l.letter.equals("apostrophe")) l.letter = "'";
+      if (l.letter.equals("quote")) l.letter = "\"";
+      if (l.letter.equals("hyphen")) l.letter = "-";
+      if (l.letter.equals("slash")) l.letter = "/";
+      if (l.letter.equals("backslash")) l.letter = "\\";
+      if (l.letter.equals("pipe")) l.letter = "|";
+      if (l.letter.equals("underscore")) l.letter = "_";
+      if (l.letter.equals("multiplication")) l.letter = "*";
+      if (l.letter.equals("amperstand")) l.letter = "&";
+      if (l.letter.equals("percent")) l.letter = "%";
+      if (l.letter.equals("dollar")) l.letter = "$";
+      if (l.letter.equals("hash")) l.letter = "#";
+      if (l.letter.equals("at")) l.letter = "@";
+      // use getFiles(path + "/" + letter) to get all files in the subfolder
+      String[] files = getAllFilesFrom(path + "/" + letter);
+      files = sort(files);
+      for (String file : files) {
+        try {
+          PImage im = loadImage(file);
+          if (im != null) {
             l.images.add(im);
-            highestPic = max(highestPic,im.height);
+            highestPic = max(highestPic, im.height);
           }
         }
+        catch (Exception e) {
+          println(e);
+        }
       }
-      catch (Exception e) {
-        println(e);
-      }
-    }
-    synchronized (letters) {
       letters.add(l);
     }
   }
@@ -143,7 +152,7 @@ void loadImages() {
 
 void loadMotifs() {
   synchronized (motifs) {
-    String[] files = getAllFilesFrom(dataPath("motifs"));
+    String[] files = getAllFilesFrom(dataPath(decks[currentDeckIndex]+"/motifs"));
     for (String f : files) {
       PImage im = loadImage(f);
       if (im!=null) motifs.add(createBackground(im));
@@ -154,13 +163,56 @@ void loadMotifs() {
 PImage createBackground(PImage motif) {
   PGraphics gr = createGraphics(width, height);
   gr.beginDraw();
-  float offsetX = ((float)motif.width+floor(((float)width/motif.width))-width)/2.0;
-  float offsetY = ((float)motif.height+floor(((float)height/motif.height))-height)/2.0;
-  for (int x=round(offsetX); x<width; x+=motif.width) {
-    for (int y=round(offsetY); y<height; y+=motif.height) {
-      gr.image(motif, x, y);
+
+  int allOverMode = 1;// 0 = centered, 1 = scaled to fit with top borders but compensate on the bottom 
+  
+  if (allOverMode == 0) {
+    float offsetX = ((float)motif.width + floor((float)width / motif.width) - width) / 2.0;
+    float offsetY = ((float)motif.height + floor((float)height / motif.height) - height) / 2.0;
+
+    for (int x = round(offsetX); x < width; x += motif.width) {
+      for (int y = round(offsetY); y < height; y += motif.height) {
+        gr.image(motif, x, y);
+      }
     }
   }
+  else if (allOverMode == 1) {
+    float mw = motif.width;
+    float mh = motif.height;
+
+    float idealCols = (float)width / mw;
+
+    int colsA = max(1, floor(idealCols));
+    int colsB = max(1, ceil(idealCols));
+
+    float scaleA = (float)width / (colsA * mw);
+    float scaleB = (float)width / (colsB * mw);
+
+    int cols;
+    float scale;
+
+    if (abs(scaleA - 1.0) < abs(scaleB - 1.0)) {
+      cols = colsA;
+      scale = scaleA;
+    } else {
+      cols = colsB;
+      scale = scaleB;
+    }
+
+    float tileW = mw * scale;
+    float tileH = mh * scale;
+
+    int rows = (int)ceil((float)height / tileH);
+
+    for (int cx = 0; cx < cols; cx++) {
+      for (int cy = 0; cy < rows; cy++) {
+        float x = cx * tileW;
+        float y = cy * tileH;
+        gr.image(motif, x, y, tileW, tileH);
+      }
+    }
+  }
+
   gr.endDraw();
   return gr.get();
 }
@@ -202,22 +254,17 @@ void keyPressed() {
     return;
   }
 
+  if (keyCode==TAB) {// TAB
+    placeMode = (placeMode+1)%2;
+    println("place mode : "+placeMode);
+  }
+
   if (int(keyCode) >= keys.length) {
     println("exotic key : " + key + " : " + int(keyCode));
     return;
   }
 
   if (keyCode==91) {// ^
-    synchronized(motifs) {
-      currentMotif[0] = motifs.get(floor(random(motifs.size())));
-      currentMotif[1] = motifs.get(floor(random(motifs.size())));
-      while (motifs.size()>0&&currentMotif[1]==currentMotif[0]) {
-        currentMotif[1] = motifs.get(floor(random(motifs.size())));
-      }
-    }
-  }
-
-  if (keyCode==93) {// $
     currentMotif[0] = null;
     currentMotif[1] = null;
     color newBackground = currentBackground;
@@ -227,6 +274,29 @@ void keyPressed() {
       newBackground = typicalColors[index];
     }
     currentBackground = newBackground;
+  }
+
+  if (keyCode==93) {// $
+    synchronized(motifs) {
+      currentMotif[0] = motifs.get(floor(random(motifs.size())));
+      currentMotif[1] = motifs.get(floor(random(motifs.size())));
+      while (motifs.size()>0&&currentMotif[1]==currentMotif[0]) {
+        currentMotif[1] = motifs.get(floor(random(motifs.size())));
+      }
+    }
+  }
+
+  if (keyCode=='1') {
+    currentDeckIndex=(currentDeckIndex+decks.length-1)%decks.length;
+    thread("loadImages");
+    thread("loadMotifs");
+    println("loaded deck : "+decks[currentDeckIndex]);
+  }
+  if (keyCode=='2') {
+    currentDeckIndex=(currentDeckIndex+1)%decks.length;
+    thread("loadImages");
+    thread("loadMotifs");
+    println("loaded deck : "+decks[currentDeckIndex]);
   }
 
   displayOneLetter(key, int(keyCode), vanishMinimum);
@@ -255,6 +325,12 @@ void displayOneLetter(char theLetter, int keyCode, float vanishMinimum) {
         changeBackgroundCounter++;
       }
     }
+    if (placeMode==1) {
+      for (int i=0; i<sprites.size(); i++) {
+        sprites.get(i).xPosTarget = (((float)i+1)/(sprites.size()+1))*width;
+        sprites.get(i).vanishMinimum += (sprites.get(sprites.size()-1).vanishMinimum - (sprites.get(i).vanishMinimum-(sprites.get(sprites.size()-1).apparitionMs-sprites.get(i).apparitionMs)))*0.5;
+      }
+    }
   }
 }
 
@@ -266,27 +342,34 @@ class Sprite {
   float course = 0;// goes from 0 to 1
   PImage im;
   float xPos = 0.5;
+  float xPosTarget = xPos;
   int keyP;
   float vanishMinimum = 0;
   float apparitionMs = 0;
+  float currentScale = 0.6;
   Sprite(PImage im, int keyP, float vanishMinimum) {
     this.im = im;
     this.keyP = keyP;
     this.vanishMinimum = vanishMinimum;
     xPos = xPosChain[xPosChainCounter] * width;
+    xPosTarget = xPos;
     xPosChainCounter = (xPosChainCounter + 1) % xPosChain.length;
     apparitionMs = millis();
   }
   void draw() {
     float tweenedCourse = tweenElastic(course);
-    float scaleToFitHeight = min((float)height/highestPic,1.0);
-    float size = lerp(0.6, 1.0, tweenedCourse) * scaleToFitHeight;
+    float scaleToFitHeight = min((float)height/highestPic, 1.0);
+    float singleTargetSize = lerp(0.6, 1.0, tweenedCourse) * scaleToFitHeight;
+    float crowdedTargetSize = singleTargetSize*map(sprites.size(), 1, 10, 1.0, 0.3);
+    currentScale = lerp(currentScale, crowdedTargetSize, 0.3);
+    xPos = lerp(xPos, xPosTarget, 0.3);
     PVector startingPos = new PVector(xPos, height * 2 / 3);
     PVector endingPos = new PVector(xPos, height / 2);
+    PVector finalPosition = new PVector(lerp(startingPos.x, endingPos.x, tweenedCourse), lerp(startingPos.y, endingPos.y, tweenedCourse));
     course += jumpSpeed;
     imageMode(CENTER);
     synchronized (im) {
-      image(im, lerp(startingPos.x, endingPos.x, tweenedCourse), lerp(startingPos.y, endingPos.y, tweenedCourse), im.width * size, im.height * size);      
+      image(im, finalPosition.x, finalPosition.y, im.width * currentScale, im.height * currentScale);
     }
   }
 }
