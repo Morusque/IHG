@@ -29,6 +29,8 @@ float fadeTime = 1.0;// duration of the fade in and out in seconds
 
 ArrayList<CopyRectangle> copyRectangles = new ArrayList<CopyRectangle>();
 
+boolean autoNewBalls = true;
+
 void setup() {
   fullScreen(Integer.parseInt(loadStrings(dataPath("../../../params.txt"))[1]));
   frameRate(60);
@@ -68,7 +70,7 @@ void draw() {
   if (balls.size() < 100 && interBallTimer++ > 20) {
     Ball b = new Ball();
     if (b.valid) {
-      balls.add(new Ball());
+      if (autoNewBalls) balls.add(new Ball());
       interBallTimer=0;
     }
   }
@@ -146,13 +148,13 @@ class Ball {
       float newAngle = angle + sin(lifeTime/100.0)*0.2;
       velocity.x = cos(newAngle)*speed;
       velocity.y = sin(newAngle)*speed;
-      position.add(velocity);   
+      position.add(velocity);
     } else if (moveMode == 2) {
       // make the ball move in a horizontal zigzag pattern
       velocity.y *= 0.95;
       velocity.x = cos(lifeTime/10.0)*20.0;
       position.add(velocity);
-    } 
+    }
 
     // make ball bounce on vertical walls
     if (position.x-radius < 0) {
@@ -202,7 +204,8 @@ void keyPressed() {
   if (keyCode!=BACKSPACE) {
     if (dark) {
       dark=false;
-      restart();
+      if (key!='w' && key!='b') restart();
+      if (key!='w' || key!='b') balls.clear();
     }
   }
   if (keyCode==BACKSPACE) {
@@ -210,6 +213,23 @@ void keyPressed() {
     if (!dark) {
       restart();
     }
+  }
+  if (key=='b') {
+    Ball b = new Ball();
+    b.velocity = PVector.sub(new PVector(width/2, height/2), b.position).normalize().mult(50.0);
+    balls.add(b);
+  }
+  if (key=='v') {
+    for (int i=0; i<balls.size(); i++) {
+      Ball b = balls.get(i);
+      b.velocity = PVector.sub(b.position, new PVector(width/2, height/2)).normalize().mult(50.0);
+    }
+  }
+  if (key=='w') {
+    autoNewBalls=false;
+  }
+  if (key=='x') {
+    autoNewBalls=true;
   }
   if (key=='c') {// smear
     for (int i=0; i<1; i++) addNewCopyRectangle();
