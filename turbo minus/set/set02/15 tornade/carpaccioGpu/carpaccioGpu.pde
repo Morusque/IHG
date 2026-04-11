@@ -1,4 +1,6 @@
 
+import java.util.ArrayDeque;
+
 // 0 = Normal
 // 1 = Total alpha
 // 2 = Négatif
@@ -16,7 +18,7 @@
 // LEFT = slower
 // B = blink
 // F = change folder
-  
+
 ArrayList<PImage> images = new ArrayList<PImage>();
 ArrayList<PImage> invertedImages = new ArrayList<PImage>();
 ArrayList<PImage> multipliableImages = new ArrayList<PImage>();
@@ -30,7 +32,7 @@ float[] selectedLengths = new float[nbShapes];
 int[] nbDivisions = new int[nbShapes];
 float[] selectedSpeedMult = new float[nbShapes];
 
-float globalSpeed = 5;
+float globalSpeed = 1.5;
 
 boolean loadedOnce = false;
 
@@ -62,7 +64,6 @@ int mode = 0;
 
 color[] palette = new color[]{
   //color(0),
-  color(255),
   color(255, 223, 230), // rose
   color(207, 57, 255), // violet
   color(0, 255, 161), // vert
@@ -74,12 +75,13 @@ PImage sparkle;
 ArrayList<Sparkle> sparkles = new ArrayList<Sparkle>();
 int nbSparkles=0;
 
-boolean cutPictures = false;
+boolean cutPictures = true;
 
 String[] folders;
 int folderIndex = -1;
 
-boolean autoChangePattern = false;
+boolean autoChangePattern = true;
+boolean autoPopSprite = true;
 
 boolean dark = false;
 
@@ -92,11 +94,13 @@ int blinkingMode = 0;
 color[] blinkingColors = new color[]{color(0), color(0xFF)};
 float blinkDuration = 200.0;
 
+int autoChangeDuration = 500;
+
 void setup() {
   //size(1920, 1080, P2D);
-  fullScreen(P2D, Integer.parseInt(loadStrings(dataPath("../../../params.txt"))[1]));
+  fullScreen(P2D, 2);
   // fullScreen(P2D);
-  frameRate(60);
+  frameRate(50);
   sparkle = loadImage(dataPath("files/sparkle01.png"));
   // frame.toFront();
   // frame.requestFocus();
@@ -137,91 +141,104 @@ void draw() {
     }
   }
   synchronized (images) {
-    if (images.size()>0) {
-      if ((frameCount%100==1 || !loadedOnce) && autoChangePattern) changePattern();
-      if (loadedOnce) {
-        for (int i=0; i<nbShapes; i++) {
-          for (int j=0; j<nbDivisions[i]; j++) {
-            // Calculate center of the screen
-            float centerX = width / 2;
-            float centerY = height / 2;
+    try {
+      if ((frameCount%autoChangeDuration==1 || !loadedOnce) && autoChangePattern && images.size()>0) {
+        mode = (new int[]{ 0, 1, 4 })[floor(random(3))];
+        changePattern();
+        if (random(100)<10) autoChangeDuration = floor(random(50, 800));
+      }
+      if ((frameCount%autoChangeDuration==floor((float)autoChangeDuration/2.0) || !loadedOnce) && autoPopSprite && images.size()>0 && random(1)<0.6f) {
+        popSprite();
+      }
+      if (images.size()>0) {
+        if (loadedOnce) {
+          for (int i=0; i<nbShapes; i++) {
+            if (selectedIms[i] == null) continue;
+            for (int j=0; j<nbDivisions[i]; j++) {
+              // Calculate center of the screen
+              float centerX = width / 2;
+              float centerY = height / 2;
 
-            // Calculate combined global rotation
-            float angle1 = (float) j * TWO_PI / nbDivisions[i];
-            float rotationDir = (i - 2);
-            if (rotationDir<=0) rotationDir -= 1;
-            float angle2 = (float) frameCount * selectedSpeedMult[i] * rotationDir / 300 * globalSpeed;
-            float combinedAngle = angle1 + angle2;
+              // Calculate combined global rotation
+              float angle1 = (float) j * TWO_PI / nbDivisions[i];
+              float rotationDir = (i - 2);
+              if (rotationDir<=0) rotationDir -= 1;
+              float angle2 = (float) frameCount * selectedSpeedMult[i] * rotationDir / 300 * globalSpeed;
+              float combinedAngle = angle1 + angle2;
 
-            // Calculate rotated position of the image
-            float cosAngle = cos(combinedAngle);
-            float sinAngle = sin(combinedAngle);
-            float offsetX = selectedLengths[i] * cosAngle;
-            float offsetY = selectedLengths[i] * sinAngle;
+              // Calculate rotated position of the image
+              float cosAngle = cos(combinedAngle);
+              float sinAngle = sin(combinedAngle);
+              float offsetX = selectedLengths[i] * cosAngle;
+              float offsetY = selectedLengths[i] * sinAngle;
 
-            // Dimensions of the image after scaling
-            float halfWidth = selectedIms[i].width * 0.7f / 2;
-            float halfHeight = selectedIms[i].height * 0.7f / 2;
+              // Dimensions of the image after scaling
+              float halfWidth = selectedIms[i].width * 1.3f / 2;
+              float halfHeight = selectedIms[i].height * 1.3f / 2;
 
-            // Add specific rotation for each object
-            float specificRotation = (float) frameCount * (i + 1) / 200; // rotation per object
-            if (specificRotationType == 0) specificRotation = 0;
-            if (specificRotationType == 1) specificRotation = combinedAngle;
-            float cosSpecific = cos(specificRotation);
-            float sinSpecific = sin(specificRotation);
+              // Add specific rotation for each object
+              float specificRotation = (float) frameCount * (i + 1) / 200; // rotation per object
+              if (specificRotationType == 0) specificRotation = 0;
+              if (specificRotationType == 1) specificRotation = combinedAngle;
+              float cosSpecific = cos(specificRotation);
+              float sinSpecific = sin(specificRotation);
 
-            // Calculate the corners of the rotated rectangle, including object-specific rotation
-            float x1 = (-halfWidth * cosSpecific - -halfHeight * sinSpecific); // Top-left corner
-            float y1 = (-halfWidth * sinSpecific + -halfHeight * cosSpecific);
+              // Calculate the corners of the rotated rectangle, including object-specific rotation
+              float x1 = (-halfWidth * cosSpecific - -halfHeight * sinSpecific); // Top-left corner
+              float y1 = (-halfWidth * sinSpecific + -halfHeight * cosSpecific);
 
-            float x2 = (halfWidth * cosSpecific - -halfHeight * sinSpecific); // Top-right corner
-            float y2 = (halfWidth * sinSpecific + -halfHeight * cosSpecific);
+              float x2 = (halfWidth * cosSpecific - -halfHeight * sinSpecific); // Top-right corner
+              float y2 = (halfWidth * sinSpecific + -halfHeight * cosSpecific);
 
-            float x3 = (halfWidth * cosSpecific - halfHeight * sinSpecific); // Bottom-right corner
-            float y3 = (halfWidth * sinSpecific + halfHeight * cosSpecific);
+              float x3 = (halfWidth * cosSpecific - halfHeight * sinSpecific); // Bottom-right corner
+              float y3 = (halfWidth * sinSpecific + halfHeight * cosSpecific);
 
-            float x4 = (-halfWidth * cosSpecific - halfHeight * sinSpecific); // Bottom-left corner
-            float y4 = (-halfWidth * sinSpecific + halfHeight * cosSpecific);
+              float x4 = (-halfWidth * cosSpecific - halfHeight * sinSpecific); // Bottom-left corner
+              float y4 = (-halfWidth * sinSpecific + halfHeight * cosSpecific);
 
-            // Apply the center offsets
-            x1 += centerX + offsetX;
-            y1 += centerY + offsetY;
-            x2 += centerX + offsetX;
-            y2 += centerY + offsetY;
-            x3 += centerX + offsetX;
-            y3 += centerY + offsetY;
-            x4 += centerX + offsetX;
-            y4 += centerY + offsetY;
+              // Apply the center offsets
+              x1 += centerX + offsetX;
+              y1 += centerY + offsetY;
+              x2 += centerX + offsetX;
+              y2 += centerY + offsetY;
+              x3 += centerX + offsetX;
+              y3 += centerY + offsetY;
+              x4 += centerX + offsetX;
+              y4 += centerY + offsetY;
 
-            // Set blend mode
-            if (mode == 1 || mode == 3) {
-              blendMode(MULTIPLY);
-            } else {
-              blendMode(NORMAL);
+              // Set blend mode
+              if (mode == 1 || mode == 3) {
+                blendMode(MULTIPLY);
+              } else {
+                blendMode(NORMAL);
+              }
+
+              // Draw the image using the corners
+              noStroke();
+              textureMode(NORMAL);
+              beginShape();
+              texture(selectedIms[i]);
+              vertex(x1, y1, 0, 0);
+              vertex(x2, y2, 1, 0);
+              vertex(x3, y3, 1, 1);
+              vertex(x4, y4, 0, 1);
+              endShape(CLOSE);
             }
-
-            // Draw the image using the corners
-            noStroke();
-            textureMode(NORMAL);
-            beginShape();
-            texture(selectedIms[i]);
-            vertex(x1, y1, 0, 0);
-            vertex(x2, y2, 1, 0);
-            vertex(x3, y3, 1, 1);
-            vertex(x4, y4, 0, 1);
-            endShape(CLOSE);
+          }
+          if (pop>0 && poppingIm != null) {
+            pushMatrix();
+            translate(width/2, height/2);
+            scale(pop);
+            rotate(popRotate);
+            imageMode(CENTER);
+            image(poppingIm, 0, 0);
+            popMatrix();
           }
         }
-        if (pop>0) {
-          pushMatrix();
-          translate(width/2, height/2);
-          scale(pop);
-          rotate(popRotate);
-          imageMode(CENTER);
-          image(poppingIm, 0, 0);
-          popMatrix();
-        }
       }
+    }
+    catch(Exception e) {
+      println("draw exception : "+e);
     }
   }
   if (mode==1||mode==2) {
@@ -261,14 +278,7 @@ void keyPressed() {
     export ^= true;
   }
   if (keyCode=='P') {
-    synchronized (images) {
-      if (images.size()>0) {
-        pop = 6;
-        if (mode==0||mode==4) poppingIm = images.get(floor(random(images.size())));
-        if (mode==2) poppingIm = invertedImages.get(floor(random(invertedImages.size())));
-        if (mode==1||mode==3) poppingIm = multipliableImages.get(floor(random(invertedImages.size())));
-      }
-    }
+    popSprite();
   }
   if (key=='0') {
     mode = 0;
@@ -319,79 +329,100 @@ void keyPressed() {
     doneUrls.clear();
     synchronized (images) {
       images.clear();
+      invertedImages.clear();
+      multipliableImages.clear();
+      resetPatternState();
     }
     println(images.size());
     thread("loadFiles");
   }
 }
 
-void generate() {
+void popSprite() {
+  synchronized (images) {
+    ArrayList<PImage> sourceImages = getCurrentImagePool();
+    if (sourceImages.size()==0) {
+      return;
+    }
+    PImage nextPop = sourceImages.get(floor(random(sourceImages.size())));
+    if (nextPop == null) return;
+    pop = 6;
+    popRotate = random(TWO_PI);
+    poppingIm = nextPop;
+  }
 }
 
 PImage cutShape(PImage oIm) {
+  if (oIm == null) return null;
   PImage im = oIm.get();
   // crop borders
-  int margin = min(min(30, floor((float)im.width/2)), floor((float)im.height/2));
-  im = im.get(margin, margin, im.width-margin*2, im.height-margin*2);
+  int margin = min(2, max(0, min(im.width, im.height)/2-1));
+  if (margin>0) {
+    im = im.get(margin, margin, im.width-margin*2, im.height-margin*2);
+  }
   // crop shape
   int startX = 0;
   int startY = 0;
   int endX = im.width;
   int endY = im.height;
-  float threshold = 1;
+  float threshold = 5;
   im.loadPixels();
   for (int x = 0; x<im.width && startX==0; x++) {
-    float thisDarkness = 0;
+    float thisDrakness = 0;
     for (int y = 0; y<im.height; y++) {
       color c = im.pixels[x+y*im.width];
-      thisDarkness += 0xFF*3-(red(c)+green(c)+blue(c));
+      thisDrakness += 0xFF*3-(red(c)+green(c)+blue(c));
     }
-    thisDarkness/=im.height;
-    if (thisDarkness>threshold) startX=x;
+    thisDrakness/=im.height;
+    if (thisDrakness>threshold) startX=x;
   }
   for (int y = 0; y<im.height && startY==0; y++) {
-    float thisDarkness = 0;
+    float thisDrakness = 0;
     for (int x = 0; x<im.width; x++) {
       color c = im.pixels[x+y*im.width];
-      thisDarkness += 0xFF*3-(red(c)+green(c)+blue(c));
+      thisDrakness += 0xFF*3-(red(c)+green(c)+blue(c));
     }
-    thisDarkness/=im.width;
-    if (thisDarkness>threshold) startY=y;
+    thisDrakness/=im.width;
+    if (thisDrakness>threshold) startY=y;
   }
   for (int x = im.width-1; x>=startX && endX==im.width; x--) {
-    float thisDarkness = 0;
+    float thisDrakness = 0;
     for (int y = 0; y<im.height; y++) {
       color c = im.pixels[x+y*im.width];
-      thisDarkness += 0xFF*3-(red(c)+green(c)+blue(c));
+      thisDrakness += 0xFF*3-(red(c)+green(c)+blue(c));
     }
-    thisDarkness/=im.height;
-    if (thisDarkness>threshold) endX=x;
+    thisDrakness/=im.height;
+    if (thisDrakness>threshold) endX=x;
   }
   for (int y = im.height-1; y>=startY && endY==im.height; y--) {
-    float thisDarkness = 0;
+    float thisDrakness = 0;
     for (int x = 0; x<im.width; x++) {
       color c = im.pixels[x+y*im.width];
-      thisDarkness += 0xFF*3-(red(c)+green(c)+blue(c));
+      thisDrakness += 0xFF*3-(red(c)+green(c)+blue(c));
     }
-    thisDarkness/=im.width;
-    if (thisDarkness>threshold) endY=y;
+    thisDrakness/=im.width;
+    if (thisDrakness>threshold) endY=y;
   }
-  im = im.get(startX, startY, endX-startX, endY-startY);
+  startX-=1;
+  startY-=1;
+  endX+=1;
+  endY+=1;
+  // im = im.get(startX, startY, endX-startX, endY-startY);
   // add white margin
-  PImage largerIm = createImage(im.width+2, im.height+2, RGB);
+  PImage largerIm = createImage(im.width+2, im.height+2, ARGB);
   largerIm.loadPixels();
   for (int i = 0; i < largerIm.pixels.length; i++) largerIm.pixels[i] = color(0xFF);
   largerIm.updatePixels();
   largerIm.copy(im, 0, 0, im.width, im.height, 1, 1, im.width, im.height);
   im = largerIm;
   // expand cutted zone
-  float emptyThreshold = 15;
+  float emptyThreshold = 35;
   boolean[] empty = new boolean[im.width*im.height];
   im.loadPixels();
   for (int x = 0; x<im.width; x++) {
     for (int y = 0; y<im.height; y++) {
       color c = im.pixels[x+y*im.width];
-      if (0xFF*3-(red(c)+green(c)+blue(c))>emptyThreshold) empty[x+y*im.width] = false;
+      if (0xFF*3-(red(c)+green(c)+blue(c))>emptyThreshold && alpha(c)>0x10) empty[x+y*im.width] = false;
       else empty[x+y*im.width] = true;
     }
   }
@@ -401,36 +432,26 @@ PImage cutShape(PImage oIm) {
     done[i] = false;
     toErase[i] = false;
   }
-  ArrayList<Integer> toCheck = new ArrayList<Integer>();
+  ArrayDeque<Integer> toCheck = new ArrayDeque<Integer>();
   toCheck.add(0);
   done[0] = true;
   while (toCheck.size()>0) {
     // println((float)toCheck.size()/done.length);
     /*
-    if (toCheck.size()<50) {
+           if (toCheck.size()<50) {
      for (int i : toCheck) print(i+",");
      println("-");
      }
      */
-    int thisIndex = toCheck.remove(0);
+    int thisIndex = toCheck.removeFirst();
     if (empty[thisIndex]) {
       toErase[thisIndex] = true;
-      if (!done[(thisIndex-1+done.length)%done.length]) {
-        toCheck.add((thisIndex-1+done.length)%done.length);
-        done[(thisIndex-1+done.length)%done.length] = true;
-      }
-      if (!done[(thisIndex+1+done.length)%done.length]) {
-        toCheck.add((thisIndex+1+done.length)%done.length);
-        done[(thisIndex+1+done.length)%done.length] = true;
-      }
-      if (!done[(thisIndex-im.width+done.length)%done.length]) {
-        toCheck.add((thisIndex-im.width+done.length)%done.length);
-        done[(thisIndex-im.width+done.length)%done.length] = true;
-      }
-      if (!done[(thisIndex+im.width+done.length)%done.length]) {
-        toCheck.add((thisIndex+im.width+done.length)%done.length);
-        done[(thisIndex+im.width+done.length)%done.length] = true;
-      }
+      int x = thisIndex%im.width;
+      int y = thisIndex/im.width;
+      enqueueIfNeeded(x-1, y, im.width, im.height, toCheck, done);
+      enqueueIfNeeded(x+1, y, im.width, im.height, toCheck, done);
+      enqueueIfNeeded(x, y-1, im.width, im.height, toCheck, done);
+      enqueueIfNeeded(x, y+1, im.width, im.height, toCheck, done);
     }
   }
   PGraphics mask = createGraphics(im.width, im.height, JAVA2D);
@@ -441,7 +462,11 @@ PImage cutShape(PImage oIm) {
       if (toErase[x+y*im.width]) mask.stroke(0);
       for (int x2=-1; x2<2; x2++) {
         for (int y2=-1; y2<2; y2++) {
-          if (toErase[((x+x2)+(y+y2)*im.width+toErase.length)%toErase.length]) mask.stroke(0);
+          int neighborX = x+x2;
+          int neighborY = y+y2;
+          if (neighborX>=0 && neighborX<im.width && neighborY>=0 && neighborY<im.height && toErase[neighborX+neighborY*im.width]) {
+            mask.stroke(0);
+          }
         }
       }
       mask.point(x, y);
@@ -463,30 +488,51 @@ void loadFiles() {
       if (!inArray(doneUrls.toArray(new String[doneUrls.size()]), inputUrl[i])) {
         println("loading file : "+inputUrl[i]);
         String fileName = fileName(inputUrl[i]);
+        boolean loadedImage = false;
         if (new File(dataPath("processed/"+"p_"+fileName)).exists() && cutPictures) {
           try {
             PImage cutted = loadImage(dataPath("processed/"+"p_"+fileName));
-            synchronized (images) {
-              images.add(cutted);
+            if (cutted != null) {
+              synchronized (images) {
+                images.add(cutted);
+              }
+              loadedImage = true;
+            } else {
+              println("load exception 1 : could not read "+fileName);
             }
           }
           catch(Exception e) {
-            println(e);
+            println("load exception 1 : "+e);
           }
           if (invertPics) {
             try {
               PImage inverted = loadImage(dataPath("processed/"+"p_i_"+fileName));
               synchronized (images) {
-                invertedImages.add(inverted);
+                if (inverted != null) {
+                  invertedImages.add(inverted);
+                }
+              }
+              if (inverted == null) {
+                println("load exception 2 : could not read "+fileName);
               }
             }
             catch(Exception e) {
-              println(e);
+              println("load exception 2 : "+e);
             }
           }
         } else {
           PImage cutted = loadImage(inputUrl[i]);
-          if (cutPictures) cutted = cutShape(cutted);
+          if (cutted == null) {
+            println("load exception 3 : could not read "+inputUrl[i]);
+            continue;
+          }
+          if (cutPictures) {
+            cutted = cutShape(cutted);
+            if (cutted == null) {
+              println("load exception 4 : cutShape returned null for "+inputUrl[i]);
+              continue;
+            }
+          }
           float reducedRatio = min(300.0f/(float)cutted.width, 300.0f/(float)cutted.height);
           if (fixedRatio!=-1) reducedRatio = fixedRatio;
           cutted.resize(floor(cutted.width*reducedRatio), floor(cutted.height*reducedRatio));
@@ -494,17 +540,25 @@ void loadFiles() {
           synchronized (images) {
             images.add(cutted);
           }
+          loadedImage = true;
           if (invertPics) {
             PGraphics inverted = createGraphics(cutted.width, cutted.height);
             inverted.beginDraw();
             inverted.image(cutted, 0, 0);
             inverted.filter(INVERT);
             inverted.endDraw();
-            inverted.get().save(dataPath("processed/"+"p_i_"+fileName));
-            invertedImages.add(inverted.get());
+            PImage invertedImage = inverted.get();
+            if (invertedImage != null) {
+              invertedImage.save(dataPath("processed/"+"p_i_"+fileName));
+              synchronized (images) {
+                invertedImages.add(invertedImage);
+              }
+            } else {
+              println("load exception 5 : could not build inverted image for "+fileName);
+            }
           }
         }
-        doneUrls.add(inputUrl[i]);
+        if (loadedImage) doneUrls.add(inputUrl[i]);
       }
     }
     catch (Exception e) {
@@ -513,12 +567,16 @@ void loadFiles() {
   }
   makeMultipliableImages();
   changePattern();
+  println("...done");
 }
 
 void makeMultipliableImages() {
   synchronized (images) {
+    multipliableImages.clear();
     for (PImage img : images) {
+      if (img == null) continue;
       PImage img2 = img.get();
+      if (img2 == null) continue;
       multipliableImages.add(img2);
       img2.loadPixels();
       for (int i = 0; i < img2.pixels.length; i++) {
@@ -534,27 +592,40 @@ void makeMultipliableImages() {
 
 void changePattern() {
   synchronized (images) {
-    if ((mode==0||mode==4) && images.size()==0) return;
-    if ((mode==1||mode==3) && multipliableImages.size()==0) return;
-    if ((mode==2) && invertedImages.size()==0) return;
-    nbShapes = floor(random(4, 16));// 4, 8
-    selectedIms = new PImage[nbShapes];
-    selectedLengths = new float[nbShapes];
-    selectedSpeedMult = new float[nbShapes];
-    nbDivisions = new int[nbShapes];
-    for (int i=0; i<nbShapes; i++) {
-      if (mode==0||mode==4) selectedIms[i] = images.get(floor(random(images.size())));
-      if (mode==1||mode==3) selectedIms[i] = multipliableImages.get(floor(random(multipliableImages.size())));
-      if (mode==2) selectedIms[i] = invertedImages.get(floor(random(invertedImages.size())));
-      selectedLengths[i] = random(dist(0, 0, width, height)/3.0f);
-      nbDivisions[i] = floor(random(2, 16));
-      if (random(1)<0.2) nbDivisions[i] = floor((random(2, 30*map(selectedLengths[i], 0, 700, 1, 5)))*random(0.1, 10.0));
-      selectedSpeedMult[i] = map(selectedLengths[i], 0, dist(0, 0, width, height)/3.0f, 1.3, 0.3);
-      bgColor = palette[floor(random(palette.length))];
+    ArrayList<PImage> sourceImages = getCurrentImagePool();
+    if (sourceImages.size()==0) {
+      resetPatternState();
+      return;
+    }
+    int nextNbShapes = floor(random(4, 16));// 4, 8
+    PImage[] nextSelectedIms = new PImage[nextNbShapes];
+    float[] nextSelectedLengths = new float[nextNbShapes];
+    float[] nextSelectedSpeedMult = new float[nextNbShapes];
+    int[] nextNbDivisions = new int[nextNbShapes];
+    for (int i=0; i<nextNbShapes; i++) {
+      nextSelectedIms[i] = sourceImages.get(floor(random(sourceImages.size())));
+      if (random(100)<20) {// favor latest pictures sometimes
+        nextSelectedIms[i] = sourceImages.get(sourceImages.size()-floor(random(random(random(sourceImages.size()))))-1);
+      }
+      if (nextSelectedIms[i] == null) {
+        resetPatternState();
+        return;
+      }
+      nextSelectedLengths[i] = random(dist(0, 0, width, height)/3.0f);
+      nextNbDivisions[i] = floor(random(2, 13));
+      if (random(1)<0.15) nextNbDivisions[i] = floor((random(2, 30*map(nextSelectedLengths[i], 0, 500, 1, 5)))*random(0.1, 10.0));
+      nextSelectedSpeedMult[i] = map(nextSelectedLengths[i], 0, dist(0, 0, width, height)/3.0f, 1.3, 0.3);
       if (evenlySpaced) {
-        nbDivisions[i] = floor((selectedLengths[i]*TWO_PI)/max(selectedIms[i].width, selectedIms[i].height));
+        nextNbDivisions[i] = floor((nextSelectedLengths[i]*TWO_PI)/max(nextSelectedIms[i].width, nextSelectedIms[i].height));
       }
     }
+    specificRotationType = floor(random(3));
+    nbShapes = nextNbShapes;
+    selectedIms = nextSelectedIms;
+    selectedLengths = nextSelectedLengths;
+    selectedSpeedMult = nextSelectedSpeedMult;
+    nbDivisions = nextNbDivisions;
+    bgColor = palette[floor(random(palette.length))];
     loadedOnce = true;
   }
   //POP
@@ -576,5 +647,33 @@ class Sparkle {
     if (size>=50) sD*=-1;
     imageMode(CENTER);
     image(sparkle, pos.x, pos.y, size, size);
+  }
+}
+
+ArrayList<PImage> getCurrentImagePool() {
+  if (mode==1||mode==3) return multipliableImages;
+  if (mode==2) return invertedImages;
+  return images;
+}
+
+void resetPatternState() {
+  loadedOnce = false;
+  pop = 0;
+  poppingIm = null;
+  nbShapes = 0;
+  selectedIms = new PImage[0];
+  selectedLengths = new float[0];
+  selectedSpeedMult = new float[0];
+  nbDivisions = new int[0];
+}
+
+void enqueueIfNeeded(int x, int y, int width, int height, ArrayDeque<Integer> toCheck, boolean[] done) {
+  if (x<0 || x>=width || y<0 || y>=height) {
+    return;
+  }
+  int index = x+y*width;
+  if (!done[index]) {
+    toCheck.addLast(index);
+    done[index] = true;
   }
 }
