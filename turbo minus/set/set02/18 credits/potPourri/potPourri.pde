@@ -137,6 +137,14 @@ void keyPressed() {
     sprites.add(new Sprite(images.get(imgIndex)));
     imgIndex = (imgIndex + 1) % images.size();
   }
+  if (key=='m') {
+    imgIndex = (imgIndex - 1 + images.size()) % images.size();
+    sprites.add(new Sprite(images.get(imgIndex)));
+    imgIndex = (imgIndex + 1) % images.size();
+  }
+  if (key=='n') {
+    imgIndex = (imgIndex - 1 + images.size()) % images.size();
+  }  
   if (key=='a') {
     for (Sprite s : sprites) s.leaving = true;
   }
