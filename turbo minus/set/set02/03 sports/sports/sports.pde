@@ -32,7 +32,7 @@ ArrayList<CopyRectangle> copyRectangles = new ArrayList<CopyRectangle>();
 boolean autoNewBalls = true;
 
 void setup() {
-  fullScreen(Integer.parseInt(loadStrings(sketchPath("../../params.txt"))[1]));
+  fullScreen(2);
   frameRate(60);
   thread("loadSprites");
   String[] ballImFiles = getAllFilesFrom(dataPath("balls"));

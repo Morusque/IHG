@@ -27,7 +27,7 @@ boolean dark = false;
 ArrayList<CopyRectangle> copyRectangles = new ArrayList<CopyRectangle>();
 
 void setup() {
-  fullScreen(Integer.parseInt(loadStrings(sketchPath("../../params.txt"))[1]));
+  fullScreen(2);
   frameRate(50);
   String[] files = getAllFilesFrom(dataPath("elements"));
   files = sort(files);

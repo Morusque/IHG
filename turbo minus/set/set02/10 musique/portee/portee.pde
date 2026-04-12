@@ -4,12 +4,13 @@
 // e = start/stop une portée
 // r = une note tombe
 // t = les notes s'envolent
-// y = chaos (à répéter plusieurs fois pour plus de chaos)
-
+// y = chaos
+// l = vole
+// m = tombe
+// k = plus gros
 // f = couleur de fond
 // p = change la hauteur de la portée
 // q = mitraille les notes
-
 
 // constants for the staff
 int numLines = 5;
@@ -33,10 +34,10 @@ color[] typicalColors = new color[]{
   color(0),
   color(255),
   color(255, 223, 230), // rose
-  color(207, 57, 255),  // violet
-  color(0, 255, 161),   // vert
-  color(255, 74, 45),   // rouge
-  color(0, 247, 255),   // bleu
+  color(207, 57, 255), // violet
+  color(0, 255, 161), // vert
+  color(255, 74, 45), // rouge
+  color(0, 247, 255), // bleu
   color(255, 243, 110)  // jaune
 };
 
@@ -62,7 +63,7 @@ boolean staffActiveLeft = false;
 boolean waving = false;
 boolean eKeyDown = false;
 void setup() {
-  fullScreen(P2D,Integer.parseInt(loadStrings(sketchPath("../../params.txt"))[1]));
+  fullScreen(P2D,2);
   frameRate(60);
   notes = new ArrayList<Note>();
   measureBars = new ArrayList<MeasureBar>();
@@ -103,7 +104,7 @@ void setup() {
 
 void draw() {
   // update
-  if (waving) shiftYTarget = map(sin((frameCount)/20.0),-1,1,100, height-staffHeight-100);
+  if (waving) shiftYTarget = map(sin((frameCount)/20.0), -1, 1, 100, height-staffHeight-100);
   if (continuousNotes) {
     if (frameCount%continuousNotesRate==0) {
       Note n = new Note();
@@ -147,8 +148,8 @@ void draw() {
   image(titreIm, 0, height-titreIm.height-0);
   if (bgColorFadeInLevel<=1.0) {
     noStroke();
-    fill(0,0xFF-(bgColorFadeInLevel*0xFF));
-    rect(0,0,width,height);
+    fill(0, 0xFF-(bgColorFadeInLevel*0xFF));
+    rect(0, 0, width, height);
     if (!dark) bgColorFadeInLevel+=0.05;
   }
 }
@@ -398,39 +399,49 @@ void keyPressed() {
   if (key=='q') {
     continuousNotes = true;
   }
-  if (key=='r') {
+  if (key=='m') {// vole
     if (notes.size()>0) {
       Note n = notes.get(floor(random(notes.size())));
       n.ySpeedD+=2.0;
       if (n.alteration!=null) n.alteration.ySpeedD = n.ySpeedD;
     }
   }
-  if (key=='t') {
+  if (key=='l') {// tombe
     for (int i = 0; i < notes.size(); i++) {
       notes.get(i).ySpeedD -= random(0, 1);
       if (notes.get(i).alteration!=null) notes.get(i).alteration.ySpeedD = notes.get(i).ySpeedD;
     }
   }
+  if (key=='k') {// plus gros
+    for (int i = 0; i < notes.size(); i++) {
+      notes.get(i).scale *= 1.1;
+    }  
+  }
   if (key=='y') {
     for (int i = 0; i < notes.size(); i++) {
       notes.get(i).ySpeedD += random(-1, 1);
       notes.get(i).xSpeed += random(-1, 1);
-      notes.get(i).scale *= random(0.9, 1.5);
+      notes.get(i).scale *= random(0.99, 1.01);
+      notes.get(i).x += random(-100, 100);
+      notes.get(i).y += random(-100, 100);
       if (notes.get(i).alteration!=null) {
         notes.get(i).alteration.ySpeedD = notes.get(i).ySpeedD;
         notes.get(i).alteration.xSpeed = notes.get(i).xSpeed;
       }
     }
   }
-  if (key=='w'||key=='x'||key=='c'||key=='v'||key=='b'||key=='n') {
+  if (key=='<'||key=='w'||key=='x'||key=='c'||key=='v'||key=='b'||key=='n'||key==','||key==';') {
     Note n = new Note();
     // place the note from low to high in the staff as if keyboard was a piano keaboard
-    if (key=='w') n.note = floor(random(10,8));
-    if (key=='x') n.note = floor(random(8,6));
-    if (key=='c') n.note = floor(random(6,4));
-    if (key=='v') n.note = floor(random(4,1));
-    if (key=='b') n.note = floor(random(1,-2));
-    if (key=='n') n.note = floor(random(-2,-5));
+    if (key=='<') n.note = floor(random(12, 10));
+    if (key=='w') n.note = floor(random(10, 8));
+    if (key=='x') n.note = floor(random(8, 6));
+    if (key=='c') n.note = floor(random(6, 4));
+    if (key=='v') n.note = floor(random(4, 2));
+    if (key=='b') n.note = floor(random(2, 0));
+    if (key=='n') n.note = floor(random(0, -2));
+    if (key==',') n.note = floor(random(-2, -4));
+    if (key==';') n.note = floor(random(-4, -6));
     n.y = (float)n.note*lineSpacing/2;
     if (n.alteration!=null) {
       n.alteration.note = n.note;
@@ -460,5 +471,5 @@ void darkMode(boolean d) {
   staffActiveLeft = false;
   MeasureBar startBar = new MeasureBar(2);
   measureBars.add(startBar);
-  bgColorFadeInLevel = 0.0;  
+  bgColorFadeInLevel = 0.0;
 }

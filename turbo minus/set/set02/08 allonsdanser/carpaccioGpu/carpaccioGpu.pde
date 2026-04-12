@@ -80,7 +80,7 @@ boolean cutPictures = true;
 String[] folders;
 int folderIndex = -1;
 
-boolean autoChangePattern = true;
+boolean autoChangePattern = false;
 boolean autoPopSprite = false;
 
 boolean dark = false;
@@ -98,7 +98,7 @@ int autoChangeDuration = 500;
 
 void setup() {
   //size(1920, 1080, P2D);
-  fullScreen(P2D,Integer.parseInt(loadStrings(sketchPath("../../params.txt"))[1]));
+  fullScreen(P2D,2);
   // fullScreen(P2D);
   frameRate(50);
   sparkle = loadImage(dataPath("files/sparkle01.png"));
@@ -299,6 +299,9 @@ void keyPressed() {
   if (key=='4') {
     mode = 4;
     changePattern();
+  }
+  if (key=='m') {
+    minimalPattern();
   }
   if (key=='a') {
     autoChangePattern ^= true;
@@ -614,6 +617,42 @@ void changePattern() {
       nextSelectedLengths[i] = random(dist(0, 0, width, height)/3.0f);
       nextNbDivisions[i] = floor(random(2, 13));
       if (random(1)<0.15) nextNbDivisions[i] = floor((random(2, 30*map(nextSelectedLengths[i], 0, 500, 1, 5)))*random(0.1, 10.0));
+      nextSelectedSpeedMult[i] = map(nextSelectedLengths[i], 0, dist(0, 0, width, height)/3.0f, 1.3, 0.3);
+      if (evenlySpaced) {
+        nextNbDivisions[i] = floor((nextSelectedLengths[i]*TWO_PI)/max(nextSelectedIms[i].width, nextSelectedIms[i].height));
+      }
+    }
+    specificRotationType = floor(random(3));
+    nbShapes = nextNbShapes;
+    selectedIms = nextSelectedIms;
+    selectedLengths = nextSelectedLengths;
+    selectedSpeedMult = nextSelectedSpeedMult;
+    nbDivisions = nextNbDivisions;
+    bgColor = palette[floor(random(palette.length))];
+    loadedOnce = true;
+  }
+}
+
+void minimalPattern() {
+  synchronized (images) {
+    ArrayList<PImage> sourceImages = getCurrentImagePool();
+    if (sourceImages.size()==0) {
+      resetPatternState();
+      return;
+    }
+    int nextNbShapes = floor(random(1, 3));
+    PImage[] nextSelectedIms = new PImage[nextNbShapes];
+    float[] nextSelectedLengths = new float[nextNbShapes];
+    float[] nextSelectedSpeedMult = new float[nextNbShapes];
+    int[] nextNbDivisions = new int[nextNbShapes];
+    for (int i=0; i<nextNbShapes; i++) {
+      nextSelectedIms[i] = sourceImages.get(floor(random(sourceImages.size())));
+      if (nextSelectedIms[i] == null) {
+        resetPatternState();
+        return;
+      }
+      nextSelectedLengths[i] = random(dist(0, 0, width, height)/3.0f);
+      nextNbDivisions[i] = floor(random(1, 3));
       nextSelectedSpeedMult[i] = map(nextSelectedLengths[i], 0, dist(0, 0, width, height)/3.0f, 1.3, 0.3);
       if (evenlySpaced) {
         nextNbDivisions[i] = floor((nextSelectedLengths[i]*TWO_PI)/max(nextSelectedIms[i].width, nextSelectedIms[i].height));

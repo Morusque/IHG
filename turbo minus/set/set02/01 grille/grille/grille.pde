@@ -95,7 +95,7 @@ PWindow controlWindow;
 
 void setup() {
   // size(1920, 1080);
-  fullScreen(Integer.parseInt(loadStrings(sketchPath("../../params.txt"))[1]));
+  fullScreen(2);
   frameRate(50);
   // load all subfolders inside dataPath and put them in decks
   decks = getSubfolders(dataPath(""));

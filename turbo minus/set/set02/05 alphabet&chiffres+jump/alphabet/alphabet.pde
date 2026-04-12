@@ -7,8 +7,10 @@
 // ENTER  display next letter
 // ^  background uni
 // $  background motif
-// =  place mode
+// tab  place mode
 // ù  autotempo
+
+import java.awt.event.KeyEvent;
 
 ArrayList<Letter> letters = new ArrayList<Letter>();
 ArrayList<Sprite> sprites = new ArrayList<Sprite>();
@@ -63,7 +65,7 @@ String[] decks;
 int currentDeckIndex = 0;
 
 void setup() {
-  fullScreen(P2D,Integer.parseInt(loadStrings(sketchPath("../../params.txt"))[1]));  
+  fullScreen(P2D, 2);  
   frameRate(60);
   // load all subfolders inside dataPath and put them in decks
   decks = getSubfolders(dataPath(""));
@@ -228,7 +230,7 @@ void keyPressed() {
 
   if (keyCode!=BACKSPACE) dark = false;
 
-  if (keyCode==39) {
+  if (key=='ù') {
     if (autoTempo==-1) autoTempo = defaultTempo;
     else autoTempo = -1;
     println("autoTempo : "+autoTempo);
@@ -264,7 +266,7 @@ void keyPressed() {
     return;
   }
 
-  if (keyCode==91) {// ^
+  if (keyCode == KeyEvent.VK_DEAD_CIRCUMFLEX || key == '^') {
     currentMotif[0] = null;
     currentMotif[1] = null;
     color newBackground = currentBackground;
@@ -276,7 +278,7 @@ void keyPressed() {
     currentBackground = newBackground;
   }
 
-  if (keyCode==93) {// $
+  if (key=='$') {// $
     synchronized(motifs) {
       currentMotif[0] = motifs.get(floor(random(motifs.size())));
       currentMotif[1] = motifs.get(floor(random(motifs.size())));
