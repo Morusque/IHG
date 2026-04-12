@@ -29,7 +29,7 @@ float darkFadeTarget = 0.0;
 
 void setup() {
   // size(900, 700, P2D);
-  fullScreen(P2D, Integer.parseInt(loadStrings(dataPath("../../../params.txt"))[1]));
+  fullScreen(Integer.parseInt(loadStrings(sketchPath("../../params.txt"))[1]));
   background(0);
   tunnelCenter = new PVector(width / 2, height / 2);
   thread("loadSprites");

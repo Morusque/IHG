@@ -62,7 +62,7 @@ boolean staffActiveLeft = false;
 boolean waving = false;
 boolean eKeyDown = false;
 void setup() {
-  fullScreen(P2D, Integer.parseInt(loadStrings(dataPath("../../../params.txt"))[1]));
+  fullScreen(P2D,Integer.parseInt(loadStrings(sketchPath("../../params.txt"))[1]));
   frameRate(60);
   notes = new ArrayList<Note>();
   measureBars = new ArrayList<MeasureBar>();

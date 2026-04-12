@@ -32,7 +32,7 @@ String[] sentences = new String[]{
 int sentenceIndex = 0;
 int sentenceCharIndex = 0;
 
-int placeMode = 0;// 0 = center, 1 = crows
+int placeMode = 1;// 0 = center, 1 = crows
 
 int bgType = 0;// 0 = uni, 1 = motif
 
@@ -63,7 +63,7 @@ String[] decks;
 int currentDeckIndex = 0;
 
 void setup() {
-  fullScreen(P2D, Integer.parseInt(loadStrings(dataPath("../../../params.txt"))[1]));
+  fullScreen(P2D,Integer.parseInt(loadStrings(sketchPath("../../params.txt"))[1]));  
   frameRate(60);
   // load all subfolders inside dataPath and put them in decks
   decks = getSubfolders(dataPath(""));

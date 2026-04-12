@@ -27,7 +27,7 @@ boolean dark = false;
 ArrayList<CopyRectangle> copyRectangles = new ArrayList<CopyRectangle>();
 
 void setup() {
-  fullScreen(Integer.parseInt(loadStrings(dataPath("../../../params.txt"))[1]));
+  fullScreen(Integer.parseInt(loadStrings(sketchPath("../../params.txt"))[1]));
   frameRate(50);
   String[] files = getAllFilesFrom(dataPath("elements"));
   files = sort(files);
@@ -37,12 +37,12 @@ void setup() {
   }
   // instanciate sprites
   background(0xFF);
-  image(loadImage(dataPath("files/degrade-pot-pourri.png")),0,0,width,height);
+  image(loadImage(dataPath("files/degrade-pot-pourri.png")), 0, 0, width, height);
 }
 
 void draw() {
 
-  // if a leaving sprite isn't visible 
+  // if a leaving sprite isn't visible
   for (int i = sprites.size() - 1; i >= 0; i--) {
     if (!sprites.get(i).isVisible() && sprites.get(i).leaving) {
       sprites.remove(i);
@@ -106,15 +106,15 @@ class Sprite {
     // draw a blurred halo behind the picture
     /*
     fill(haloColor, 0x08);
-    noStroke();
-    for (int i = 0; i < 10; i++) {
-      rect(pos.x - i, pos.y - i, img.width + 2 * i, img.height + 2 * i);
-    }
-    */
+     noStroke();
+     for (int i = 0; i < 10; i++) {
+     rect(pos.x - i, pos.y - i, img.width + 2 * i, img.height + 2 * i);
+     }
+     */
     // draw the picture
     image(img, pos.x, pos.y);
   }
-  
+
   boolean isVisible() {
     if (pos.x>width) return false;
     if (pos.x+img.width<0) return false;
@@ -122,7 +122,6 @@ class Sprite {
     if (pos.y+img.height<0) return false;
     return true;
   }
-  
 }
 
 void keyPressed() {
@@ -144,7 +143,7 @@ void keyPressed() {
   }
   if (key=='n') {
     imgIndex = (imgIndex - 1 + images.size()) % images.size();
-  }  
+  }
   if (key=='a') {
     for (Sprite s : sprites) s.leaving = true;
   }

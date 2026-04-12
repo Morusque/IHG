@@ -81,7 +81,7 @@ String[] folders;
 int folderIndex = -1;
 
 boolean autoChangePattern = true;
-boolean autoPopSprite = true;
+boolean autoPopSprite = false;
 
 boolean dark = false;
 
@@ -98,7 +98,7 @@ int autoChangeDuration = 500;
 
 void setup() {
   //size(1920, 1080, P2D);
-  fullScreen(P2D, 2);
+  fullScreen(P2D,Integer.parseInt(loadStrings(sketchPath("../../params.txt"))[1]));
   // fullScreen(P2D);
   frameRate(50);
   sparkle = loadImage(dataPath("files/sparkle01.png"));
@@ -628,14 +628,6 @@ void changePattern() {
     bgColor = palette[floor(random(palette.length))];
     loadedOnce = true;
   }
-  //POP
-  /*
-  if (images.size()>0 && random(1)<0.5) {
-   pop = 2;
-   popRotate = random(TWO_PI);
-   poppingIm = images.get(floor(random(images.size())));
-   }
-   */
 }
 
 class Sparkle {
