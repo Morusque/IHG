@@ -9,6 +9,7 @@
 // $  background motif
 // tab  place mode
 // ù  autotempo
+// 1 2 3 decks
 
 import java.awt.event.KeyEvent;
 
@@ -289,16 +290,22 @@ void keyPressed() {
   }
 
   if (keyCode=='1') {
-    currentDeckIndex=(currentDeckIndex+decks.length-1)%decks.length;
+    currentDeckIndex=(0)%decks.length;
     thread("loadImages");
     thread("loadMotifs");
     println("loaded deck : "+decks[currentDeckIndex]);
   }
   if (keyCode=='2') {
-    currentDeckIndex=(currentDeckIndex+1)%decks.length;
+    currentDeckIndex=(1)%decks.length;
     thread("loadImages");
     thread("loadMotifs");
     println("loaded deck : "+decks[currentDeckIndex]);
+  }
+  if (keyCode=='3') {
+    currentDeckIndex=(2)%decks.length;
+    thread("loadImages");
+    thread("loadMotifs");
+    println("loaded deck : "+decks[currentDeckIndex]);    
   }
 
   displayOneLetter(key, int(keyCode), vanishMinimum);

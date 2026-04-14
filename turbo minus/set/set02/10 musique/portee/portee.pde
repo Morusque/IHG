@@ -12,6 +12,8 @@
 // p = change la hauteur de la portée
 // q = mitraille les notes
 
+import java.awt.event.KeyEvent;
+
 // constants for the staff
 int numLines = 5;
 float lineSpacing = 100;
@@ -63,7 +65,7 @@ boolean staffActiveLeft = false;
 boolean waving = false;
 boolean eKeyDown = false;
 void setup() {
-  fullScreen(P2D,2);
+  fullScreen(P2D, 2);
   frameRate(60);
   notes = new ArrayList<Note>();
   measureBars = new ArrayList<MeasureBar>();
@@ -415,7 +417,7 @@ void keyPressed() {
   if (key=='k') {// plus gros
     for (int i = 0; i < notes.size(); i++) {
       notes.get(i).scale *= 1.1;
-    }  
+    }
   }
   if (key=='y') {
     for (int i = 0; i < notes.size(); i++) {
@@ -430,18 +432,18 @@ void keyPressed() {
       }
     }
   }
-  if (key=='<'||key=='w'||key=='x'||key=='c'||key=='v'||key=='b'||key=='n'||key==','||key==';') {
+  if (key==KeyEvent.VK_LESS||key=='w'||key=='x'||key=='c'||key=='v'||key=='b'||key=='n'||key==','||key==';'||key==':') {
     Note n = new Note();
     // place the note from low to high in the staff as if keyboard was a piano keaboard
-    if (key=='<') n.note = floor(random(12, 10));
-    if (key=='w') n.note = floor(random(10, 8));
-    if (key=='x') n.note = floor(random(8, 6));
-    if (key=='c') n.note = floor(random(6, 4));
-    if (key=='v') n.note = floor(random(4, 2));
-    if (key=='b') n.note = floor(random(2, 0));
-    if (key=='n') n.note = floor(random(0, -2));
-    if (key==',') n.note = floor(random(-2, -4));
-    if (key==';') n.note = floor(random(-4, -6));
+    if (key=='w') n.note = floor(random(12, 10));
+    if (key=='x') n.note = floor(random(10, 8));
+    if (key=='c') n.note = floor(random(8, 6));
+    if (key=='v') n.note = floor(random(6, 4));
+    if (key=='b') n.note = floor(random(4, 2));
+    if (key=='n') n.note = floor(random(2, 0));
+    if (key==',') n.note = floor(random(0, -2));
+    if (key==';') n.note = floor(random(-2, -4));
+    if (key==':') n.note = floor(random(-4, -6));
     n.y = (float)n.note*lineSpacing/2;
     if (n.alteration!=null) {
       n.alteration.note = n.note;
