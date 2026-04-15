@@ -16,6 +16,8 @@ boolean dark = true;
 // n = fond blanc
 // p = sprite pop
 // BACKSPACE = toggle dark mode
+// g / d = gauche droite
+// f = réactive le rebond
 
 int moveMode = 0;
 // 0 = normal movement
@@ -30,6 +32,8 @@ float fadeTime = 1.0;// duration of the fade in and out in seconds
 ArrayList<CopyRectangle> copyRectangles = new ArrayList<CopyRectangle>();
 
 boolean autoNewBalls = true;
+
+boolean ballBounce = true;
 
 void setup() {
   fullScreen(2);
@@ -158,11 +162,14 @@ class Ball {
 
     // make ball bounce on vertical walls
     if (position.x-radius < 0) {
-      velocity.x = abs(velocity.x)*1.0;
+      if (ballBounce) velocity.x = abs(velocity.x)*1.0;
+      else velocity.x=max(0,velocity.x);
     }
     if (position.x+radius > width) {
-      velocity.x = abs(velocity.x)*-1.0;
+      if (ballBounce) velocity.x = abs(velocity.x)*-1.0;
+      else velocity.x=min(0,velocity.x);
     }
+
     // make ball bounce on other balls
     for (Ball b : balls) {
       if (b != this) {
@@ -172,6 +179,7 @@ class Ball {
           normal.normalize();
           float dot = PVector.dot(velocity, normal);
           PVector newVelocity = PVector.sub(velocity, PVector.mult(normal, 2*dot));
+          if (!ballBounce) newVelocity = new PVector(0, 0);
           velocity = newVelocity;
           // revise ball speed depending on colliding ball speed
           velocity.add(b.velocity.x*0.1*(b.mass/mass), b.velocity.y*0.1*(b.mass/mass));
@@ -272,6 +280,27 @@ void keyPressed() {
     for (Ball b : balls) {
       b.radius*=1.1;
     }
+  }
+  if (key=='g') {
+    for (Ball b : balls) {
+      b.velocity.x-=random(50, 100);
+      b.velocity.y=0;
+    }
+    ballBounce=false;
+  }
+  if (key=='d') {
+    for (Ball b : balls) {
+      b.velocity.x=random(50, 100);
+      b.velocity.y=0;
+    }
+    ballBounce=false;
+  }
+  if (key=='f') {
+    for (Ball b : balls) {
+      b.velocity.x=random(-100, 100);
+      b.velocity.y=random(-100, 100);
+    }
+    ballBounce=true;
   }
   if (key=='s') {
     moveMode = (moveMode+1)%3;
