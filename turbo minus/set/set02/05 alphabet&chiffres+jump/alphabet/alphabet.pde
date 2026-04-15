@@ -2,13 +2,14 @@
 // (touches)  affiche la lettre
 // DROITE  next sentence
 // GAUCHE  reset sentence
-// BAS resymc autotempo
-// BACKSPACE  dark bg
+// BAS     resymc autotempo
 // ENTER  display next letter
+// HAUT   chaos
 // ^  background uni
 // $  background motif
 // tab  place mode
 // ù  autotempo
+// BACKSPACE  dark bg
 // 1 2 3 decks
 
 import java.awt.event.KeyEvent;
@@ -65,8 +66,10 @@ float highestPic = 0;
 String[] decks;
 int currentDeckIndex = 0;
 
+boolean chaosMode = false;
+
 void setup() {
-  fullScreen(P2D, 2);  
+  fullScreen(P2D, 2);
   frameRate(60);
   // load all subfolders inside dataPath and put them in decks
   decks = getSubfolders(dataPath(""));
@@ -99,6 +102,23 @@ void draw() {
   if (currentMotif[currentMotifIndex]!=null) {
     imageMode(CORNER);
     image(currentMotif[currentMotifIndex], 0, 0);
+  }
+  if (chaosMode) {
+    if (letters.size()>0) {
+      Letter letter = letters.get(floor(random(letters.size())));
+      if (letter.images.size()>0) {
+        if (random(10)<1) {
+          Sprite s = new Sprite(letter.images.get(floor(random(letter.images.size()))), -1, vanishMinimum);
+          sprites.add(s);
+          s.xPos=random(width);
+          s.xPosTarget=random(width);
+        }
+        if (random(10)<1) {
+          imageMode(CENTER);
+          image(letter.images.get(floor(random(letter.images.size()))), random(width), random(height));
+        }
+      }
+    }
   }
   for (Sprite s : sprites) s.draw();
   if (dark) background(0);
@@ -167,8 +187,8 @@ PImage createBackground(PImage motif) {
   PGraphics gr = createGraphics(width, height);
   gr.beginDraw();
 
-  int allOverMode = 1;// 0 = centered, 1 = scaled to fit with top borders but compensate on the bottom 
-  
+  int allOverMode = 1;// 0 = centered, 1 = scaled to fit with top borders but compensate on the bottom
+
   if (allOverMode == 0) {
     float offsetX = ((float)motif.width + floor((float)width / motif.width) - width) / 2.0;
     float offsetY = ((float)motif.height + floor((float)height / motif.height) - height) / 2.0;
@@ -178,8 +198,7 @@ PImage createBackground(PImage motif) {
         gr.image(motif, x, y);
       }
     }
-  }
-  else if (allOverMode == 1) {
+  } else if (allOverMode == 1) {
     float mw = motif.width;
     float mh = motif.height;
 
@@ -237,6 +256,9 @@ void keyPressed() {
     println("autoTempo : "+autoTempo);
   }
 
+  if (keyCode == UP) {// chaos
+    chaosMode ^= true;
+  }
   if (keyCode == DOWN) {// tempo phase at 0
     tempoCounter = millis()-200;
   }
@@ -305,7 +327,7 @@ void keyPressed() {
     currentDeckIndex=(2)%decks.length;
     thread("loadImages");
     thread("loadMotifs");
-    println("loaded deck : "+decks[currentDeckIndex]);    
+    println("loaded deck : "+decks[currentDeckIndex]);
   }
 
   displayOneLetter(key, int(keyCode), vanishMinimum);
