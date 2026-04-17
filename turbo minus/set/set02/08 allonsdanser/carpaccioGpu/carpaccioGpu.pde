@@ -18,6 +18,7 @@ import java.util.ArrayDeque;
 // LEFT = slower
 // B = blink
 // F = change folder
+// G = previous folder
 
 ArrayList<PImage> images = new ArrayList<PImage>();
 ArrayList<PImage> invertedImages = new ArrayList<PImage>();
@@ -98,7 +99,7 @@ int autoChangeDuration = 500;
 
 void setup() {
   //size(1920, 1080, P2D);
-  fullScreen(P2D,2);
+  fullScreen(P2D, 2);
   // fullScreen(P2D);
   frameRate(50);
   sparkle = loadImage(dataPath("files/sparkle01.png"));
@@ -328,6 +329,20 @@ void keyPressed() {
   if (key=='f') {
     if (folders.length>0) {
       folderIndex = (folderIndex+1)%folders.length;
+    }
+    doneUrls.clear();
+    synchronized (images) {
+      images.clear();
+      invertedImages.clear();
+      multipliableImages.clear();
+      resetPatternState();
+    }
+    println(images.size());
+    thread("loadFiles");
+  }
+  if (key=='g') {
+    if (folders.length>0) {
+      folderIndex = (folderIndex-1+folders.length)%folders.length;
     }
     doneUrls.clear();
     synchronized (images) {

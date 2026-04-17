@@ -31,7 +31,7 @@ int xPosChainCounter = 0;
 boolean[] keys = new boolean[65536];
 
 String[] sentences = new String[]{
-  "abcdefghijklmnopqrstuvwxyz"
+  "abcdefghiklmnopqrstuvwxyz"
 };
 int sentenceIndex = 0;
 int sentenceCharIndex = 0;
